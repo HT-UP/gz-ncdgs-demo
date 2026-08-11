@@ -20,6 +20,7 @@ body,
 
 body {
   background: #f0f2f5;
+  overflow: hidden;
 }
 
 a {
@@ -29,15 +30,18 @@ a {
 
 .app-shell {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: #f0f2f5;
 }
 
 .sidebar {
   width: 240px;
+  flex: none;
   background: #ffffff;
   border-right: 1px solid #e4e7ed;
-  padding: 16px 0;
+  padding-bottom: 16px;
+  overflow-y: auto;
   transition: width 0.2s ease;
 }
 
@@ -113,13 +117,14 @@ a {
 
 .main-area {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  min-width: 0;
 }
 
 .topbar {
   height: 64px;
+  flex: none;
   background: linear-gradient(90deg, #da251d 0%, #b71c1c 100%);
   color: #fff;
   display: flex;
@@ -220,17 +225,22 @@ a {
 }
 
 .breadcrumb-bar {
-  padding: 14px 24px 0;
+  flex: none;
+  padding: 14px 24px;
 }
 
 .content {
   flex: 1;
   width: 100%;
+  min-height: 0;
   padding: 20px;
+  padding-top: 0;
+  overflow-y: auto;
 }
 
 .footer {
   height: 48px;
+  flex: none;
   background: #4a4a4a;
   color: #ffffff;
   display: flex;
@@ -454,4 +464,223 @@ a {
 .el-table {
   --el-table-header-bg-color: #f7f8fa;
   --el-table-header-text-color: #4a4a4a;
+}
+
+/* ---------- 数据标准管理模块（模块二） ---------- */
+
+.standard-page {
+  display: grid;
+  gap: 16px;
+}
+
+.mt-12 {
+  margin-top: 12px;
+}
+
+.toolbar-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.search-input {
+  width: 240px;
+}
+
+.filter-select {
+  width: 160px;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.pager {
+  margin-top: 16px;
+  justify-content: flex-end;
+}
+
+.no-mapping {
+  color: #e34d59;
+  font-size: 12px;
+}
+
+.er-table {
+  position: absolute;
+  width: 260px;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  cursor: pointer;
+  transform-origin: top left;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.er-table:hover,
+.er-table.is-selected {
+  border-color: #da251d;
+  box-shadow: 0 4px 16px rgba(218, 37, 29, 0.15);
+}
+
+.er-table-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #da251d;
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.er-table-fields {
+  padding: 4px 0;
+}
+
+.er-table-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+.er-table-field:hover {
+  background: #f7f8fa;
+}
+
+.er-field-name {
+  flex: 1;
+  color: #4a4a4a;
+}
+
+.er-field-type {
+  color: #8c8c8c;
+  font-size: 11px;
+}
+
+.er-field-key {
+  color: #da251d;
+}
+
+.er-table-field.is-key {
+  background: rgba(218, 37, 29, 0.05);
+}
+
+.canvas-wrap {
+  position: relative;
+  height: 520px;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  background-color: #fbfcfd;
+  background-image: linear-gradient(rgba(228, 231, 237, 0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(228, 231, 237, 0.5) 1px, transparent 1px);
+  background-size: 20px 20px;
+  overflow: hidden;
+}
+
+.canvas-zoom {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 10;
+}
+
+.property-form {
+  display: grid;
+  gap: 4px;
+}
+
+.ddl-block {
+  margin: 0;
+  padding: 12px;
+  border-radius: 6px;
+  background: #2d2f33;
+  color: #d9e0ea;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow: auto;
+  max-height: 360px;
+}
+
+.no-border {
+  border-bottom: none;
+}
+
+.template-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #edf0f5;
+  cursor: pointer;
+}
+
+.template-item:last-child {
+  border-bottom: none;
+}
+
+.template-item:hover .template-name {
+  color: #da251d;
+}
+
+.template-icon {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: rgba(218, 37, 29, 0.08);
+  color: #da251d;
+}
+
+.template-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4a4a4a;
+  transition: color 0.2s ease;
+}
+
+.template-desc {
+  margin-top: 2px;
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+.trend-negative {
+  color: #00a854;
+  font-weight: 600;
+}
+
+.impact-list {
+  display: grid;
+  gap: 4px;
+}
+
+.impact-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  color: #4a4a4a;
+  font-size: 13px;
+}
+
+.diff-cell {
+  color: #e34d59;
+  font-weight: 600;
+  text-decoration: line-through;
+}
+
+.diff-cell--new {
+  text-decoration: none;
+  color: #da251d;
+}
+
+.sidebar-menu .el-sub-menu .el-menu-item {
+  margin: 4px 12px;
+  height: 40px;
 }

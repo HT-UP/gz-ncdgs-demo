@@ -31,7 +31,7 @@
       </el-col>
     </el-row>
 
-    <el-row :gutter="16" class="section-row">
+    <el-row :gutter="16">
       <el-col :xs="24" :lg="16">
         <el-card class="panel-card dashboard-card" shadow="never">
           <template #header>
@@ -62,7 +62,7 @@
       </el-col>
     </el-row>
 
-    <el-row :gutter="16" class="section-row section-row--compact">
+    <el-row :gutter="16">
       <el-col :xs="24" :lg="12">
         <el-card class="panel-card dashboard-card" shadow="never">
           <template #header>
@@ -124,7 +124,7 @@
       </el-col>
     </el-row>
 
-    <el-row :gutter="16" class="section-row section-row--compact">
+    <el-row :gutter="16">
       <el-col :span="24">
         <el-card class="panel-card dashboard-card" shadow="never">
           <template #header>

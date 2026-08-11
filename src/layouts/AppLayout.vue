@@ -25,6 +25,33 @@
           <el-icon><Monitor /></el-icon>
           <template #title>工作台</template>
         </el-menu-item>
+
+        <el-sub-menu index="/standard">
+          <template #title>
+            <el-icon><Files /></el-icon>
+            <span>数据标准管理</span>
+          </template>
+          <el-menu-item index="/standard/list">
+            <el-icon><Tickets /></el-icon>
+            <template #title>标准列表</template>
+          </el-menu-item>
+          <el-menu-item index="/standard/model-design">
+            <el-icon><Grid /></el-icon>
+            <template #title>模型设计</template>
+          </el-menu-item>
+          <el-menu-item index="/standard/quality-standard">
+            <el-icon><Checked /></el-icon>
+            <template #title>数据质量标准</template>
+          </el-menu-item>
+          <el-menu-item index="/standard/implementation">
+            <el-icon><TrendCharts /></el-icon>
+            <template #title>标准实施监控</template>
+          </el-menu-item>
+          <el-menu-item index="/standard/version">
+            <el-icon><Clock /></el-icon>
+            <template #title>版本管理</template>
+          </el-menu-item>
+        </el-sub-menu>
       </el-menu>
     </aside>
 
@@ -66,7 +93,8 @@
       <div class="breadcrumb-bar">
         <el-breadcrumb separator="/">
           <el-breadcrumb-item>首页</el-breadcrumb-item>
-          <el-breadcrumb-item>工作台</el-breadcrumb-item>
+          <el-breadcrumb-item v-if="breadcrumb.parent">{{ breadcrumb.parent }}</el-breadcrumb-item>
+          <el-breadcrumb-item>{{ breadcrumb.current }}</el-breadcrumb-item>
         </el-breadcrumb>
       </div>
 
@@ -80,9 +108,26 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Bell, Monitor, Search, UserFilled } from '@element-plus/icons-vue'
+import { Bell, Checked, Clock, Files, Grid, Monitor, Search, Tickets, TrendCharts, UserFilled } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const collapsed = false
+
+const pageTitleMap: Record<string, { parent: string; current: string }> = {
+  '/dashboard': { parent: '', current: '工作台' },
+  '/standard/list': { parent: '数据标准管理', current: '标准列表' },
+  '/standard/model-design': { parent: '数据标准管理', current: '模型设计' },
+  '/standard/quality-standard': { parent: '数据标准管理', current: '数据质量标准' },
+  '/standard/implementation': { parent: '数据标准管理', current: '标准实施监控' },
+  '/standard/version': { parent: '数据标准管理', current: '版本管理' },
+}
+
+const breadcrumb = computed(() => {
+  const matched = Object.keys(pageTitleMap)
+    .filter((path) => route.path.startsWith(path))
+    .sort((a, b) => b.length - a.length)[0]
+  return pageTitleMap[matched ?? '/dashboard']
+})
 </script>

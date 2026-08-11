@@ -192,9 +192,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.d
     ...{ class: "page-toolbar" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({});
-__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "page-kicker" },
-});
 __VLS_asFunctionalElement(__VLS_intrinsicElements.h2, __VLS_intrinsicElements.h2)({
     ...{ class: "page-title" },
 });
@@ -240,10 +237,10 @@ const __VLS_12 = {}.ElRow;
 /** @type {[typeof __VLS_components.ElRow, typeof __VLS_components.elRow, typeof __VLS_components.ElRow, typeof __VLS_components.elRow, ]} */ ;
 // @ts-ignore
 const __VLS_13 = __VLS_asFunctionalComponent(__VLS_12, new __VLS_12({
-    gutter: (20),
+    gutter: (16),
 }));
 const __VLS_14 = __VLS_13({
-    gutter: (20),
+    gutter: (16),
 }, ...__VLS_functionalComponentArgsRest(__VLS_13));
 __VLS_15.slots.default;
 for (const [item] of __VLS_getVForSourceType((__VLS_ctx.dashboard.stats))) {
@@ -346,12 +343,10 @@ const __VLS_40 = {}.ElRow;
 /** @type {[typeof __VLS_components.ElRow, typeof __VLS_components.elRow, typeof __VLS_components.ElRow, typeof __VLS_components.elRow, ]} */ ;
 // @ts-ignore
 const __VLS_41 = __VLS_asFunctionalComponent(__VLS_40, new __VLS_40({
-    gutter: (20),
-    ...{ class: "mt-20" },
+    gutter: (16),
 }));
 const __VLS_42 = __VLS_41({
-    gutter: (20),
-    ...{ class: "mt-20" },
+    gutter: (16),
 }, ...__VLS_functionalComponentArgsRest(__VLS_41));
 __VLS_43.slots.default;
 const __VLS_44 = {}.ElCol;
@@ -494,12 +489,10 @@ const __VLS_80 = {}.ElRow;
 /** @type {[typeof __VLS_components.ElRow, typeof __VLS_components.elRow, typeof __VLS_components.ElRow, typeof __VLS_components.elRow, ]} */ ;
 // @ts-ignore
 const __VLS_81 = __VLS_asFunctionalComponent(__VLS_80, new __VLS_80({
-    gutter: (20),
-    ...{ class: "mt-20" },
+    gutter: (16),
 }));
 const __VLS_82 = __VLS_81({
-    gutter: (20),
-    ...{ class: "mt-20" },
+    gutter: (16),
 }, ...__VLS_functionalComponentArgsRest(__VLS_81));
 __VLS_83.slots.default;
 const __VLS_84 = {}.ElCol;
@@ -708,12 +701,10 @@ const __VLS_128 = {}.ElRow;
 /** @type {[typeof __VLS_components.ElRow, typeof __VLS_components.elRow, typeof __VLS_components.ElRow, typeof __VLS_components.elRow, ]} */ ;
 // @ts-ignore
 const __VLS_129 = __VLS_asFunctionalComponent(__VLS_128, new __VLS_128({
-    gutter: (20),
-    ...{ class: "mt-20" },
+    gutter: (16),
 }));
 const __VLS_130 = __VLS_129({
-    gutter: (20),
-    ...{ class: "mt-20" },
+    gutter: (16),
 }, ...__VLS_functionalComponentArgsRest(__VLS_129));
 __VLS_131.slots.default;
 const __VLS_132 = {}.ElCol;
@@ -838,7 +829,6 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.p, __VLS_intrinsicElements.p)(
 var __VLS_151;
 /** @type {__VLS_StyleScopedClasses['workbench-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['page-toolbar']} */ ;
-/** @type {__VLS_StyleScopedClasses['page-kicker']} */ ;
 /** @type {__VLS_StyleScopedClasses['page-title']} */ ;
 /** @type {__VLS_StyleScopedClasses['page-meta']} */ ;
 /** @type {__VLS_StyleScopedClasses['metric-card']} */ ;
@@ -850,7 +840,6 @@ var __VLS_151;
 /** @type {__VLS_StyleScopedClasses['metric-subtitle']} */ ;
 /** @type {__VLS_StyleScopedClasses['trend-positive']} */ ;
 /** @type {__VLS_StyleScopedClasses['trend-hint']} */ ;
-/** @type {__VLS_StyleScopedClasses['mt-20']} */ ;
 /** @type {__VLS_StyleScopedClasses['panel-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['dashboard-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['panel-header']} */ ;
@@ -861,7 +850,6 @@ var __VLS_151;
 /** @type {__VLS_StyleScopedClasses['panel-header']} */ ;
 /** @type {__VLS_StyleScopedClasses['chart-box']} */ ;
 /** @type {__VLS_StyleScopedClasses['chart-box--compact']} */ ;
-/** @type {__VLS_StyleScopedClasses['mt-20']} */ ;
 /** @type {__VLS_StyleScopedClasses['panel-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['dashboard-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['panel-header']} */ ;
@@ -877,7 +865,6 @@ var __VLS_151;
 /** @type {__VLS_StyleScopedClasses['stack-item-main']} */ ;
 /** @type {__VLS_StyleScopedClasses['stack-item-text']} */ ;
 /** @type {__VLS_StyleScopedClasses['stack-item-meta']} */ ;
-/** @type {__VLS_StyleScopedClasses['mt-20']} */ ;
 /** @type {__VLS_StyleScopedClasses['panel-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['dashboard-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['panel-header']} */ ;
