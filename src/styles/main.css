@@ -37,7 +37,7 @@ a {
   width: 240px;
   background: #ffffff;
   border-right: 1px solid #e4e7ed;
-  padding: 0 0 16px 0;
+  padding: 16px 0;
   transition: width 0.2s ease;
 }
 
@@ -88,11 +88,8 @@ a {
 }
 
 .sidebar-menu {
-  padding-top: 4px;
-}
-
-.sidebar-menu {
   border-right: none;
+  padding-top: 4px;
 }
 
 .sidebar-menu .el-menu-item {
@@ -229,7 +226,7 @@ a {
 .content {
   flex: 1;
   width: 100%;
-  padding: 24px;
+  padding: 20px;
 }
 
 .footer {
@@ -244,16 +241,57 @@ a {
 
 .workbench-page {
   display: grid;
-  gap: 20px;
+  gap: 16px;
 }
 
+.page-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.page-kicker {
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 22px;
+  color: #4a4a4a;
+}
+
+.page-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dashboard-card,
 .metric-card,
 .panel-card {
   border-radius: 8px;
 }
 
+.metric-card .el-card__body,
+.panel-card .el-card__body {
+  padding: 10px 12px;
+}
+
+.panel-card .el-card__header {
+  padding: 8px 12px;
+}
+
 .metric-card {
-  min-height: 120px;
+  min-height: 104px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(218, 37, 29, 0.12);
 }
 
 .metric-card .el-card__body,
@@ -272,32 +310,54 @@ a {
   background: #da251d;
 }
 
+.stat-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.stat-badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #da251d, #b71c1c);
+  color: #fff;
+}
+
 .metric-title {
   color: #8c8c8c;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .metric-value {
-  font-size: 30px;
+  font-size: 26px;
   font-weight: 700;
   color: #da251d;
-  margin: 8px 0;
+  margin: 2px 0 2px;
 }
 
 .metric-subtitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   color: #8c8c8c;
   font-size: 12px;
 }
 
-.mt-20 {
-  margin-top: 20px;
+.trend-positive {
+  color: #da251d;
+  font-weight: 600;
 }
 
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: #4a4a4a;
   position: relative;
@@ -315,76 +375,74 @@ a {
   background: #da251d;
 }
 
-.workbench-hero {
-  min-height: 100%;
-}
-
-.hero-grid {
-  display: grid;
-  grid-template-columns: 1.4fr 0.8fr;
-  gap: 20px;
-}
-
-.hero-main h2 {
-  margin: 0 0 12px;
-  color: #da251d;
-  font-size: 24px;
-}
-
-.hero-main p {
-  margin: 0;
-  color: #4a4a4a;
-  line-height: 1.8;
-}
-
-.hero-actions {
+.panel-actions {
   display: flex;
-  gap: 12px;
-  margin-top: 20px;
-}
-
-.hero-side {
-  display: grid;
+  align-items: center;
   gap: 12px;
 }
 
-.hero-item {
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
-  padding: 14px;
-  background: #fff;
+.chart-box {
+  height: 270px;
+}
+
+.chart-box--compact {
+  height: 270px;
+}
+
+.list-item,
+.stack-item,
+.notice-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid #edf0f5;
+  cursor: pointer;
 }
 
-.hero-item span {
+.list-item-main,
+.stack-item-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.list-item-text,
+.stack-item-text,
+.notice-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.list-item-meta,
+.stack-item-meta,
+.notice-time {
   color: #8c8c8c;
   font-size: 12px;
+  flex: none;
 }
 
-.hero-item strong {
-  color: #da251d;
-  font-size: 18px;
+.stack-list,
+.notice-list {
+  display: grid;
+  gap: 0;
 }
 
-.shortcut-list {
-  width: 100%;
+.dialog-text {
+  margin: 0;
+  line-height: 1.8;
 }
 
-.shortcut-btn {
-  justify-content: flex-start;
+.section-row {
+  margin-top: 16px;
 }
 
-.progress-block + .progress-block {
-  margin-top: 18px;
-}
-
-.progress-label {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  color: #4a4a4a;
+.mb-16 {
+  margin-bottom: 16px;
 }
 
 .el-card__header {

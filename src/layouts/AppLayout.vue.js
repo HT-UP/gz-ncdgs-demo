@@ -32,7 +32,7 @@ if (!__VLS_ctx.collapsed) {
 }
 if (!__VLS_ctx.collapsed) {
     __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-        ...{ class: "sidebar-note" },
+        ...{ class: "sidebar-divider" },
     });
 }
 const __VLS_0 = {}.ElMenu;
@@ -256,7 +256,7 @@ __VLS_asFunctionalElement(__VLS_intrinsicElements.footer, __VLS_intrinsicElement
 /** @type {__VLS_StyleScopedClasses['brand-text']} */ ;
 /** @type {__VLS_StyleScopedClasses['brand-title']} */ ;
 /** @type {__VLS_StyleScopedClasses['brand-subtitle']} */ ;
-/** @type {__VLS_StyleScopedClasses['sidebar-note']} */ ;
+/** @type {__VLS_StyleScopedClasses['sidebar-divider']} */ ;
 /** @type {__VLS_StyleScopedClasses['sidebar-menu']} */ ;
 /** @type {__VLS_StyleScopedClasses['main-area']} */ ;
 /** @type {__VLS_StyleScopedClasses['topbar']} */ ;
