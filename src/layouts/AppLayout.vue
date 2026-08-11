@@ -114,7 +114,53 @@
             <template #title>数据标签管理</template>
           </el-menu-item>
         </el-sub-menu>
+
+        <el-sub-menu index="/datadev">
+          <template #title>
+            <el-icon><Promotion /></el-icon>
+            <span>数据开发集成</span>
+          </template>
+          <el-menu-item index="/datadev/overview">
+            <el-icon><DataAnalysis /></el-icon>
+            <template #title>开发总览</template>
+          </el-menu-item>
+          <el-menu-item index="/datadev/batch">
+            <el-icon><DocumentCopy /></el-icon>
+            <template #title>批量处理</template>
+          </el-menu-item>
+          <el-menu-item index="/datadev/realtime">
+            <el-icon><VideoCamera /></el-icon>
+            <template #title>实时处理</template>
+          </el-menu-item>
+          <el-menu-item index="/datadev/stream">
+            <el-icon><WindPower /></el-icon>
+            <template #title>流式数据处理</template>
+          </el-menu-item>
+          <el-menu-item index="/datadev/task">
+            <el-icon><List /></el-icon>
+            <template #title>任务管理</template>
+          </el-menu-item>
+          <el-menu-item index="/datadev/monitor">
+            <el-icon><Monitor /></el-icon>
+            <template #title>任务监控</template>
+          </el-menu-item>
+          <el-menu-item index="/datadev/flow">
+            <el-icon><Share /></el-icon>
+            <template #title>流程化配置</template>
+          </el-menu-item>
+          <el-menu-item index="/datadev/security">
+            <el-icon><Lock /></el-icon>
+            <template #title>安全与合规</template>
+          </el-menu-item>
+        </el-sub-menu>
       </el-menu>
+
+      <div class="sidebar-footer">
+        <div class="collapse-trigger" @click="collapsed = !collapsed">
+          <el-icon :size="16"><Expand v-if="collapsed" /><Fold v-else /></el-icon>
+          <span>{{ collapsed ? '' : '收起菜单' }}</span>
+        </div>
+      </div>
     </aside>
 
     <div class="main-area">
@@ -170,12 +216,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { Bell, Checked, Clock, Coin, Connection, DataAnalysis, Document, Download, Edit, Files, Folder, Grid, List, Monitor, PriceTag, Search, SetUp, Share, Tickets, TrendCharts, UserFilled } from '@element-plus/icons-vue'
+import { Bell, Checked, Clock, Coin, Connection, DataAnalysis, Document, DocumentCopy, Download, Edit, Expand, Files, Fold, Folder, Grid, List, Lock, Monitor, PriceTag, Promotion, Search, SetUp, Share, Tickets, TrendCharts, UserFilled, VideoCamera, WindPower } from '@element-plus/icons-vue'
 
 const route = useRoute()
-const collapsed = false
+const collapsed = ref(false)
 
 const pageTitleMap: Record<string, { parent: string; current: string }> = {
   '/dashboard': { parent: '', current: '工作台' },
@@ -190,6 +236,14 @@ const pageTitleMap: Record<string, { parent: string; current: string }> = {
   '/datasource/template': { parent: '数据源管理', current: '参数模板管理' },
   '/datasource/group': { parent: '数据源管理', current: '分组管理' },
   '/datasource/monitor': { parent: '数据源管理', current: '数据源监控' },
+  '/datadev/overview': { parent: '数据开发集成', current: '开发总览' },
+  '/datadev/batch': { parent: '数据开发集成', current: '批量处理' },
+  '/datadev/realtime': { parent: '数据开发集成', current: '实时处理' },
+  '/datadev/stream': { parent: '数据开发集成', current: '流式数据处理' },
+  '/datadev/task': { parent: '数据开发集成', current: '任务管理' },
+  '/datadev/monitor': { parent: '数据开发集成', current: '任务监控' },
+  '/datadev/flow': { parent: '数据开发集成', current: '流程化配置' },
+  '/datadev/security': { parent: '数据开发集成', current: '安全与合规' },
   '/metadata/overview': { parent: '元数据管理', current: '元数据总览' },
   '/metadata/model': { parent: '元数据管理', current: '元模型管理' },
   '/metadata/data-element': { parent: '元数据管理', current: '数据元管理' },

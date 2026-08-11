@@ -115,6 +115,53 @@ export const routes: RouteRecordRaw[] = [
           },
         ],
       },
+      {
+        path: 'datadev',
+        name: 'DataDev',
+        redirect: '/datadev/overview',
+        children: [
+          {
+            path: 'overview',
+            name: 'DataDevOverview',
+            component: () => import('@/pages/datadev/overview.vue'),
+          },
+          {
+            path: 'batch',
+            name: 'BatchProcessing',
+            component: () => import('@/pages/datadev/batch.vue'),
+          },
+          {
+            path: 'realtime',
+            name: 'RealtimeProcessing',
+            component: () => import('@/pages/datadev/realtime.vue'),
+          },
+          {
+            path: 'stream',
+            name: 'StreamProcessing',
+            component: () => import('@/pages/datadev/stream.vue'),
+          },
+          {
+            path: 'task',
+            name: 'TaskManage',
+            component: () => import('@/pages/datadev/task.vue'),
+          },
+          {
+            path: 'monitor',
+            name: 'TaskMonitor',
+            component: () => import('@/pages/datadev/monitor.vue'),
+          },
+          {
+            path: 'flow',
+            name: 'FlowConfig',
+            component: () => import('@/pages/datadev/flow.vue'),
+          },
+          {
+            path: 'security',
+            name: 'DataDevSecurity',
+            component: () => import('@/pages/datadev/security.vue'),
+          },
+        ],
+      },
     ],
   },
 ]
