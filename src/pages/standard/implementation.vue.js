@@ -184,11 +184,9 @@ const __VLS_12 = {}.ElRow;
 // @ts-ignore
 const __VLS_13 = __VLS_asFunctionalComponent(__VLS_12, new __VLS_12({
     gutter: (16),
-    ...{ class: "mb-16" },
 }));
 const __VLS_14 = __VLS_13({
     gutter: (16),
-    ...{ class: "mb-16" },
 }, ...__VLS_functionalComponentArgsRest(__VLS_13));
 __VLS_15.slots.default;
 const __VLS_16 = {}.ElCol;
@@ -273,11 +271,9 @@ const __VLS_32 = {}.ElRow;
 // @ts-ignore
 const __VLS_33 = __VLS_asFunctionalComponent(__VLS_32, new __VLS_32({
     gutter: (16),
-    ...{ class: "mb-16" },
 }));
 const __VLS_34 = __VLS_33({
     gutter: (16),
-    ...{ class: "mb-16" },
 }, ...__VLS_functionalComponentArgsRest(__VLS_33));
 __VLS_35.slots.default;
 const __VLS_36 = {}.ElCol;
@@ -608,7 +604,6 @@ var __VLS_35;
 /** @type {__VLS_StyleScopedClasses['metric-value']} */ ;
 /** @type {__VLS_StyleScopedClasses['metric-subtitle']} */ ;
 /** @type {__VLS_StyleScopedClasses['trend-hint']} */ ;
-/** @type {__VLS_StyleScopedClasses['mb-16']} */ ;
 /** @type {__VLS_StyleScopedClasses['panel-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['dashboard-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['panel-header']} */ ;
@@ -619,7 +614,6 @@ var __VLS_35;
 /** @type {__VLS_StyleScopedClasses['panel-header']} */ ;
 /** @type {__VLS_StyleScopedClasses['chart-box']} */ ;
 /** @type {__VLS_StyleScopedClasses['chart-box--compact']} */ ;
-/** @type {__VLS_StyleScopedClasses['mb-16']} */ ;
 /** @type {__VLS_StyleScopedClasses['panel-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['dashboard-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['panel-header']} */ ;

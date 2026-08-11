@@ -52,6 +52,68 @@
             <template #title>版本管理</template>
           </el-menu-item>
         </el-sub-menu>
+
+        <el-sub-menu index="/datasource">
+          <template #title>
+            <el-icon><Connection /></el-icon>
+            <span>数据源管理</span>
+          </template>
+          <el-menu-item index="/datasource/list">
+            <el-icon><List /></el-icon>
+            <template #title>数据源列表</template>
+          </el-menu-item>
+          <el-menu-item index="/datasource/register">
+            <el-icon><Edit /></el-icon>
+            <template #title>数据源注册</template>
+          </el-menu-item>
+          <el-menu-item index="/datasource/connection-pool">
+            <el-icon><SetUp /></el-icon>
+            <template #title>连接池管理</template>
+          </el-menu-item>
+          <el-menu-item index="/datasource/template">
+            <el-icon><Files /></el-icon>
+            <template #title>参数模板管理</template>
+          </el-menu-item>
+          <el-menu-item index="/datasource/group">
+            <el-icon><Folder /></el-icon>
+            <template #title>分组管理</template>
+          </el-menu-item>
+          <el-menu-item index="/datasource/monitor">
+            <el-icon><Monitor /></el-icon>
+            <template #title>数据源监控</template>
+          </el-menu-item>
+        </el-sub-menu>
+
+        <el-sub-menu index="/metadata">
+          <template #title>
+            <el-icon><Coin /></el-icon>
+            <span>元数据管理</span>
+          </template>
+          <el-menu-item index="/metadata/overview">
+            <el-icon><DataAnalysis /></el-icon>
+            <template #title>元数据总览</template>
+          </el-menu-item>
+          <el-menu-item index="/metadata/model">
+            <el-icon><Grid /></el-icon>
+            <template #title>元模型管理</template>
+          </el-menu-item>
+          <el-menu-item index="/metadata/data-element">
+            <el-icon><Document /></el-icon>
+            <template #title>数据元管理</template>
+          </el-menu-item>
+          <el-menu-item index="/metadata/collection">
+            <el-icon><Download /></el-icon>
+            <template #title>元数据采集</template>
+          </el-menu-item>
+          <el-menu-item index="/metadata/lineage">
+            <el-icon><Share /></el-icon>
+            <template #title>血缘解析</template>
+          </el-menu-item>
+          <el-menu-item index="/metadata/tag">
+            <el-icon><PriceTag /></el-icon>
+            <template #title>数据标签管理</template>
+          </el-menu-item>
+        </el-sub-menu>
       </el-menu>
     </aside>
 
@@ -110,7 +172,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Bell, Checked, Clock, Files, Grid, Monitor, Search, Tickets, TrendCharts, UserFilled } from '@element-plus/icons-vue'
+import { Bell, Checked, Clock, Coin, Connection, DataAnalysis, Document, Download, Edit, Files, Folder, Grid, List, Monitor, PriceTag, Search, SetUp, Share, Tickets, TrendCharts, UserFilled } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const collapsed = false
@@ -122,6 +184,18 @@ const pageTitleMap: Record<string, { parent: string; current: string }> = {
   '/standard/quality-standard': { parent: '数据标准管理', current: '数据质量标准' },
   '/standard/implementation': { parent: '数据标准管理', current: '标准实施监控' },
   '/standard/version': { parent: '数据标准管理', current: '版本管理' },
+  '/datasource/list': { parent: '数据源管理', current: '数据源列表' },
+  '/datasource/register': { parent: '数据源管理', current: '数据源注册' },
+  '/datasource/connection-pool': { parent: '数据源管理', current: '连接池管理' },
+  '/datasource/template': { parent: '数据源管理', current: '参数模板管理' },
+  '/datasource/group': { parent: '数据源管理', current: '分组管理' },
+  '/datasource/monitor': { parent: '数据源管理', current: '数据源监控' },
+  '/metadata/overview': { parent: '元数据管理', current: '元数据总览' },
+  '/metadata/model': { parent: '元数据管理', current: '元模型管理' },
+  '/metadata/data-element': { parent: '元数据管理', current: '数据元管理' },
+  '/metadata/collection': { parent: '元数据管理', current: '元数据采集' },
+  '/metadata/lineage': { parent: '元数据管理', current: '血缘解析' },
+  '/metadata/tag': { parent: '元数据管理', current: '数据标签管理' },
 }
 
 const breadcrumb = computed(() => {
