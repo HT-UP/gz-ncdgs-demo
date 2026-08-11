@@ -9,7 +9,7 @@
         </div>
       </div>
 
-      <div v-if="!collapsed" class="sidebar-divider"></div>
+      <div class="sidebar-divider"></div>
 
       <el-menu
         class="sidebar-menu"
