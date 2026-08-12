@@ -239,6 +239,102 @@ export const routes = [
                     },
                 ],
             },
+            {
+                path: 'security',
+                name: 'Security',
+                redirect: '/security/overview',
+                children: [
+                    {
+                        path: 'overview',
+                        name: 'SecurityOverview',
+                        component: () => import('@/pages/security/overview.vue'),
+                    },
+                    {
+                        path: 'tenant',
+                        name: 'TenantManage',
+                        component: () => import('@/pages/security/tenant.vue'),
+                    },
+                    {
+                        path: 'access-control',
+                        name: 'AccessControl',
+                        component: () => import('@/pages/security/access-control.vue'),
+                    },
+                    {
+                        path: 'audit',
+                        name: 'SecurityAudit',
+                        component: () => import('@/pages/security/audit.vue'),
+                    },
+                    {
+                        path: 'encryption',
+                        name: 'EncryptionMasking',
+                        component: () => import('@/pages/security/encryption.vue'),
+                    },
+                    {
+                        path: 'compliance',
+                        name: 'ComplianceGovern',
+                        component: () => import('@/pages/security/compliance.vue'),
+                    },
+                ],
+            },
+            {
+                path: 'intelligence',
+                name: 'Intelligence',
+                redirect: '/intelligence/overview',
+                children: [
+                    {
+                        path: 'overview',
+                        name: 'IntelligenceOverview',
+                        component: () => import('@/pages/intelligence/overview.vue'),
+                    },
+                    {
+                        path: 'metadata-ai',
+                        name: 'MetadataAI',
+                        component: () => import('@/pages/intelligence/metadata-ai.vue'),
+                    },
+                    {
+                        path: 'classify',
+                        name: 'IntelligenceClassify',
+                        component: () => import('@/pages/intelligence/classify.vue'),
+                    },
+                    {
+                        path: 'knowledge',
+                        name: 'KnowledgeBase',
+                        component: () => import('@/pages/intelligence/knowledge.vue'),
+                    },
+                    {
+                        path: 'agent',
+                        name: 'DataGovernAgent',
+                        component: () => import('@/pages/intelligence/agent.vue'),
+                    },
+                ],
+            },
+            {
+                path: 'system',
+                name: 'System',
+                redirect: '/system/user',
+                children: [
+                    {
+                        path: 'user',
+                        name: 'UserManage',
+                        component: () => import('@/pages/system/user.vue'),
+                    },
+                    {
+                        path: 'role',
+                        name: 'RolePermission',
+                        component: () => import('@/pages/system/role.vue'),
+                    },
+                    {
+                        path: 'monitor',
+                        name: 'SystemMonitor',
+                        component: () => import('@/pages/system/monitor.vue'),
+                    },
+                    {
+                        path: 'log',
+                        name: 'OperationLog',
+                        component: () => import('@/pages/system/log.vue'),
+                    },
+                ],
+            },
         ],
     },
 ];

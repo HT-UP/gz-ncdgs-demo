@@ -219,6 +219,87 @@
             <template #title>探查任务管理</template>
           </el-menu-item>
         </el-sub-menu>
+
+        <el-sub-menu index="/security">
+          <template #title>
+            <el-icon><Lock /></el-icon>
+            <span>数据安全与合规</span>
+          </template>
+          <el-menu-item index="/security/overview">
+            <el-icon><DataAnalysis /></el-icon>
+            <template #title>安全总览</template>
+          </el-menu-item>
+          <el-menu-item index="/security/tenant">
+            <el-icon><OfficeBuilding /></el-icon>
+            <template #title>多租户管理</template>
+          </el-menu-item>
+          <el-menu-item index="/security/access-control">
+            <el-icon><Key /></el-icon>
+            <template #title>访问控制</template>
+          </el-menu-item>
+          <el-menu-item index="/security/audit">
+            <el-icon><Document /></el-icon>
+            <template #title>安全审计</template>
+          </el-menu-item>
+          <el-menu-item index="/security/encryption">
+            <el-icon><Lock /></el-icon>
+            <template #title>加密与脱敏</template>
+          </el-menu-item>
+          <el-menu-item index="/security/compliance">
+            <el-icon><Checked /></el-icon>
+            <template #title>合规治理</template>
+          </el-menu-item>
+        </el-sub-menu>
+
+        <el-sub-menu index="/intelligence">
+          <template #title>
+            <el-icon><Cpu /></el-icon>
+            <span>智能治理能力</span>
+          </template>
+          <el-menu-item index="/intelligence/overview">
+            <el-icon><Monitor /></el-icon>
+            <template #title>智能总览</template>
+          </el-menu-item>
+          <el-menu-item index="/intelligence/metadata-ai">
+            <el-icon><MagicStick /></el-icon>
+            <template #title>元数据智能补全</template>
+          </el-menu-item>
+          <el-menu-item index="/intelligence/classify">
+            <el-icon><Collection /></el-icon>
+            <template #title>智能分类分级</template>
+          </el-menu-item>
+          <el-menu-item index="/intelligence/knowledge">
+            <el-icon><Notebook /></el-icon>
+            <template #title>知识库管理</template>
+          </el-menu-item>
+          <el-menu-item index="/intelligence/agent">
+            <el-icon><Cpu /></el-icon>
+            <template #title>数据治理智能体</template>
+          </el-menu-item>
+        </el-sub-menu>
+
+        <el-sub-menu index="/system">
+          <template #title>
+            <el-icon><Setting /></el-icon>
+            <span>系统管理</span>
+          </template>
+          <el-menu-item index="/system/user">
+            <el-icon><User /></el-icon>
+            <template #title>用户管理</template>
+          </el-menu-item>
+          <el-menu-item index="/system/role">
+            <el-icon><UserFilled /></el-icon>
+            <template #title>角色权限</template>
+          </el-menu-item>
+          <el-menu-item index="/system/monitor">
+            <el-icon><Monitor /></el-icon>
+            <template #title>运维监控</template>
+          </el-menu-item>
+          <el-menu-item index="/system/log">
+            <el-icon><Document /></el-icon>
+            <template #title>操作日志</template>
+          </el-menu-item>
+        </el-sub-menu>
       </el-menu>
 
       <div class="sidebar-footer">
@@ -284,7 +365,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { Aim, Bell, Setting, Checked, Clock, Coin, Connection, DataAnalysis, DataLine, Document, DocumentChecked, DocumentCopy, Download, Edit, Expand, Files, Fold, Folder, FolderOpened, Grid, List, Lock, Monitor, PriceTag, Promotion, Search, SetUp, Share, Tickets, TrendCharts, Trophy, UserFilled, VideoCamera, View, WindPower } from '@element-plus/icons-vue'
+import { Aim, Bell, Setting, Checked, Clock, Coin, Collection, Connection, Cpu, DataAnalysis, DataLine, Document, DocumentChecked, DocumentCopy, Download, Edit, Expand, Files, Fold, Folder, FolderOpened, Grid, Key, List, Lock, MagicStick, Monitor, Notebook, OfficeBuilding, PriceTag, Promotion, Search, SetUp, Share, Tickets, TrendCharts, Trophy, User, UserFilled, VideoCamera, View, WindPower } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const collapsed = ref(false)
@@ -323,6 +404,21 @@ const pageTitleMap: Record<string, { parent: string; current: string }> = {
   '/resource/lineage': { parent: '数据资源管理', current: '血缘分析' },
   '/resource/feature': { parent: '数据资源管理', current: '特征自动识别' },
   '/resource/explore': { parent: '数据资源管理', current: '探查任务管理' },
+  '/security/overview': { parent: '数据安全与合规', current: '安全总览' },
+  '/security/tenant': { parent: '数据安全与合规', current: '多租户管理' },
+  '/security/access-control': { parent: '数据安全与合规', current: '访问控制' },
+  '/security/audit': { parent: '数据安全与合规', current: '安全审计' },
+  '/security/encryption': { parent: '数据安全与合规', current: '加密与脱敏' },
+  '/security/compliance': { parent: '数据安全与合规', current: '合规治理' },
+  '/intelligence/overview': { parent: '智能治理能力', current: '智能总览' },
+  '/intelligence/metadata-ai': { parent: '智能治理能力', current: '元数据智能补全' },
+  '/intelligence/classify': { parent: '智能治理能力', current: '智能分类分级' },
+  '/intelligence/knowledge': { parent: '智能治理能力', current: '知识库管理' },
+  '/intelligence/agent': { parent: '智能治理能力', current: '数据治理智能体' },
+  '/system/user': { parent: '系统管理', current: '用户管理' },
+  '/system/role': { parent: '系统管理', current: '角色权限' },
+  '/system/monitor': { parent: '系统管理', current: '运维监控' },
+  '/system/log': { parent: '系统管理', current: '操作日志' },
   '/metadata/overview': { parent: '元数据管理', current: '元数据总览' },
   '/metadata/model': { parent: '元数据管理', current: '元模型管理' },
   '/metadata/data-element': { parent: '元数据管理', current: '数据元管理' },

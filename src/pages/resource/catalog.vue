@@ -1,5 +1,5 @@
 <template>
-  <div class="standard-page">
+  <div class="standard-page catalog-page">
     <el-card class="panel-card dashboard-card" shadow="never">
       <template #header>
         <div class="panel-header">
@@ -26,7 +26,7 @@
                 <el-icon :size="14"><component :is="nodeIcon[data.type === 'layer' ? 'layer' : 'folder']" /></el-icon>
                 <span>{{ data.label }}</span>
                 <span v-if="data.assetCount" class="catalog-count">{{ data.assetCount }}</span>
-                <Lock v-if="data.type === 'custom' && data.id.startsWith('custom-map')" class="catalog-lock" :size="12" />
+                <!-- <Lock v-if="data.id === 'custom-map'" class="catalog-lock" :size="12" /> -->
               </span>
             </template>
           </el-tree>
