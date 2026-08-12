@@ -162,6 +162,85 @@ export const routes: RouteRecordRaw[] = [
           },
         ],
       },
+      {
+        path: 'quality',
+        name: 'Quality',
+        redirect: '/quality/overview',
+        children: [
+          {
+            path: 'overview',
+            name: 'QualityOverview',
+            component: () => import('@/pages/quality/overview.vue'),
+          },
+          {
+            path: 'rule',
+            name: 'QualityRule',
+            component: () => import('@/pages/quality/rule.vue'),
+          },
+          {
+            path: 'task',
+            name: 'QualityTask',
+            component: () => import('@/pages/quality/task.vue'),
+          },
+          {
+            path: 'audit',
+            name: 'QualityAudit',
+            component: () => import('@/pages/quality/audit.vue'),
+          },
+          {
+            path: 'certification',
+            name: 'QualityCertification',
+            component: () => import('@/pages/quality/certification.vue'),
+          },
+          {
+            path: 'report',
+            name: 'QualityReport',
+            component: () => import('@/pages/quality/report.vue'),
+          },
+        ],
+      },
+      {
+        path: 'resource',
+        name: 'Resource',
+        redirect: '/resource/overview',
+        children: [
+          {
+            path: 'overview',
+            name: 'ResourceOverview',
+            component: () => import('@/pages/resource/overview.vue'),
+          },
+          {
+            path: 'catalog',
+            name: 'ResourceCatalog',
+            component: () => import('@/pages/resource/catalog.vue'),
+          },
+          {
+            path: 'preview',
+            name: 'DataPreview',
+            component: () => import('@/pages/resource/preview.vue'),
+          },
+          {
+            path: 'permission',
+            name: 'PermissionApply',
+            component: () => import('@/pages/resource/permission.vue'),
+          },
+          {
+            path: 'lineage',
+            name: 'ResourceLineage',
+            component: () => import('@/pages/resource/lineage.vue'),
+          },
+          {
+            path: 'feature',
+            name: 'FeatureAutoIdentify',
+            component: () => import('@/pages/resource/feature.vue'),
+          },
+          {
+            path: 'explore',
+            name: 'ExploreTask',
+            component: () => import('@/pages/resource/explore.vue'),
+          },
+        ],
+      },
     ],
   },
 ]

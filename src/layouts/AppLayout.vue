@@ -153,6 +153,72 @@
             <template #title>安全与合规</template>
           </el-menu-item>
         </el-sub-menu>
+
+        <el-sub-menu index="/quality">
+          <template #title>
+            <el-icon><DataLine /></el-icon>
+            <span>数据质量管理</span>
+          </template>
+          <el-menu-item index="/quality/overview">
+            <el-icon><DataAnalysis /></el-icon>
+            <template #title>质量总览</template>
+          </el-menu-item>
+          <el-menu-item index="/quality/rule">
+            <el-icon><Setting /></el-icon>
+            <template #title>规则定义</template>
+          </el-menu-item>
+          <el-menu-item index="/quality/task">
+            <el-icon><VideoCamera /></el-icon>
+            <template #title>质量任务</template>
+          </el-menu-item>
+          <el-menu-item index="/quality/audit">
+            <el-icon><DocumentChecked /></el-icon>
+            <template #title>审计与合规</template>
+          </el-menu-item>
+          <el-menu-item index="/quality/certification">
+            <el-icon><Trophy /></el-icon>
+            <template #title>质量认证</template>
+          </el-menu-item>
+          <el-menu-item index="/quality/report">
+            <el-icon><DocumentCopy /></el-icon>
+            <template #title>质量报告</template>
+          </el-menu-item>
+        </el-sub-menu>
+
+        <el-sub-menu index="/resource">
+          <template #title>
+            <el-icon><FolderOpened /></el-icon>
+            <span>数据资源管理</span>
+          </template>
+          <el-menu-item index="/resource/overview">
+            <el-icon><DataAnalysis /></el-icon>
+            <template #title>资源总览</template>
+          </el-menu-item>
+          <el-menu-item index="/resource/catalog">
+            <el-icon><Folder /></el-icon>
+            <template #title>资源目录</template>
+          </el-menu-item>
+          <el-menu-item index="/resource/preview">
+            <el-icon><View /></el-icon>
+            <template #title>数据预览</template>
+          </el-menu-item>
+          <el-menu-item index="/resource/permission">
+            <el-icon><Lock /></el-icon>
+            <template #title>权限申请与审批</template>
+          </el-menu-item>
+          <el-menu-item index="/resource/lineage">
+            <el-icon><Share /></el-icon>
+            <template #title>血缘分析</template>
+          </el-menu-item>
+          <el-menu-item index="/resource/feature">
+            <el-icon><Aim /></el-icon>
+            <template #title>特征自动识别</template>
+          </el-menu-item>
+          <el-menu-item index="/resource/explore">
+            <el-icon><Search /></el-icon>
+            <template #title>探查任务管理</template>
+          </el-menu-item>
+        </el-sub-menu>
       </el-menu>
 
       <div class="sidebar-footer">
@@ -218,7 +284,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { Bell, Checked, Clock, Coin, Connection, DataAnalysis, Document, DocumentCopy, Download, Edit, Expand, Files, Fold, Folder, Grid, List, Lock, Monitor, PriceTag, Promotion, Search, SetUp, Share, Tickets, TrendCharts, UserFilled, VideoCamera, WindPower } from '@element-plus/icons-vue'
+import { Aim, Bell, Setting, Checked, Clock, Coin, Connection, DataAnalysis, DataLine, Document, DocumentChecked, DocumentCopy, Download, Edit, Expand, Files, Fold, Folder, FolderOpened, Grid, List, Lock, Monitor, PriceTag, Promotion, Search, SetUp, Share, Tickets, TrendCharts, Trophy, UserFilled, VideoCamera, View, WindPower } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const collapsed = ref(false)
@@ -244,6 +310,19 @@ const pageTitleMap: Record<string, { parent: string; current: string }> = {
   '/datadev/monitor': { parent: '数据开发集成', current: '任务监控' },
   '/datadev/flow': { parent: '数据开发集成', current: '流程化配置' },
   '/datadev/security': { parent: '数据开发集成', current: '安全与合规' },
+  '/quality/overview': { parent: '数据质量管理', current: '质量总览' },
+  '/quality/rule': { parent: '数据质量管理', current: '规则定义' },
+  '/quality/task': { parent: '数据质量管理', current: '质量任务' },
+  '/quality/audit': { parent: '数据质量管理', current: '审计与合规' },
+  '/quality/certification': { parent: '数据质量管理', current: '质量认证' },
+  '/quality/report': { parent: '数据质量管理', current: '质量报告' },
+  '/resource/overview': { parent: '数据资源管理', current: '资源总览' },
+  '/resource/catalog': { parent: '数据资源管理', current: '资源目录' },
+  '/resource/preview': { parent: '数据资源管理', current: '数据预览' },
+  '/resource/permission': { parent: '数据资源管理', current: '权限申请与审批' },
+  '/resource/lineage': { parent: '数据资源管理', current: '血缘分析' },
+  '/resource/feature': { parent: '数据资源管理', current: '特征自动识别' },
+  '/resource/explore': { parent: '数据资源管理', current: '探查任务管理' },
   '/metadata/overview': { parent: '元数据管理', current: '元数据总览' },
   '/metadata/model': { parent: '元数据管理', current: '元模型管理' },
   '/metadata/data-element': { parent: '元数据管理', current: '数据元管理' },
