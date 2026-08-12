@@ -129,7 +129,7 @@ const renderPerfChart = () => {
   const data = Array.from({ length: hours }, (_, i) => 18 + Math.round(Math.sin(i / 2) * 6 + Math.random() * 8))
   perfChart.setOption({
     tooltip: { trigger: 'axis' },
-    legend: { data: ['响应时间(ms)', '吞吐量(K/s)', '活跃连接数'], top: 0, left: 0 },
+    legend: { data: ['响应时间(ms)', '吞吐量(K/s)', '活跃连接数'], top: 0 },
     grid: { left: 44, right: 44, top: 36, bottom: 32 },
     xAxis: {
       type: 'category',

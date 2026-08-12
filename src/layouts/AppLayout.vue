@@ -16,7 +16,8 @@
         router
         :default-active="route.path"
         :collapse="collapsed"
-        :collapse-transition="false"
+        :collapse-transition="true"
+        :unique-opened="true"
         background-color="#ffffff"
         text-color="#4a4a4a"
         active-text-color="#da251d"
