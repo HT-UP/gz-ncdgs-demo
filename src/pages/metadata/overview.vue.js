@@ -33,7 +33,7 @@ const renderTrendChart = () => {
     const buildSeries = (base) => Array.from({ length: days }, (_, i) => Math.max(0, base + Math.round(Math.sin(i / 2.5) * 30 + Math.random() * 20)));
     trendChart.setOption({
         tooltip: { trigger: 'axis' },
-        legend: { data: ['新增表', '变更字段', '采集失败'], top: 0, left: 0 },
+        legend: { data: ['新增表', '变更字段', '采集失败'], top: 0 },
         grid: { left: 40, right: 20, top: 40, bottom: 30 },
         xAxis: { type: 'category', data: dates },
         yAxis: [{ type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#E4E7ED' } } }],
