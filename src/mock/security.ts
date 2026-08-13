@@ -55,6 +55,13 @@ export type MaskingRule = {
   status: '已上线' | '草稿' | '审批中'
   version: string
   updateTime: string
+  description?: string
+  priority?: number
+  roles?: string[]
+  effectiveDate?: string
+  maskParams?: { headKeep?: number; tailKeep?: number; maskChar?: string }
+  replaceParams?: { replaceChar?: string; ratio?: number }
+  hashParams?: { algorithm?: string; salt?: boolean }
 }
 
 export type ComplianceItem = {
