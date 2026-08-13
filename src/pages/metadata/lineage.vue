@@ -14,7 +14,7 @@
                 @keyup.enter="highlightTable"
               />
               <el-button type="danger" size="small" @click="highlightTable">定位</el-button>
-              <el-button size="small" :icon="Upload" @click="uploadSql">上传SQL解析</el-button>
+              <el-button size="small" :icon="Connection" @click="openLineageDialog">血缘填报</el-button>
             </div>
             <div ref="lineageChartRef" class="lineage-chart"></div>
             <div class="sankey-legend">
@@ -76,6 +76,110 @@
         </el-tab-pane>
       </el-tabs>
     </div>
+
+    <el-dialog
+      v-model="lineageDialogVisible"
+      title="血缘填报 · 拖拽连线"
+      fullscreen
+      class="lineage-report-dialog"
+      destroy-on-close
+    >
+      <el-alert class="report-hint" type="info" :closable="false" show-icon>
+        <template #title>
+          从左侧<span class="hint-strong">上游源表</span>的行或端口按住拖拽，连线到右侧<span class="hint-strong">下游目标表</span>的行，
+          松手即建立一条血缘连线；连线在下表可调整处理函数，保存后血缘图实时更新。
+        </template>
+      </el-alert>
+
+      <div class="report-builder">
+        <div id="report-canvas" ref="wrapRef" class="report-canvas-wrap">
+          <svg class="report-svg">
+            <path
+              v-for="lnk in computedLinks"
+              :key="lnk.id"
+              :d="lnk.path"
+              :class="{ 'is-active': activeLinkId === lnk.id || hoverLinkId === lnk.id }"
+              @mouseenter="hoverLinkId = lnk.id"
+              @mouseleave="hoverLinkId = null"
+            />
+            <path v-if="dragging" :d="tempPath" class="report-temp-path" />
+          </svg>
+          <div v-if="hoverTip" class="report-hover-tip" :style="{ left: hoverTip.x + 'px', top: hoverTip.y + 'px' }">
+            {{ hoverTip.text }}
+          </div>
+
+          <aside class="report-side report-side-left" @scroll="linkRevision++">
+            <div class="side-title">上游源表（数据库）</div>
+            <div v-for="db in upDbs" :key="db.name" class="db-section">
+              <div class="db-head">{{ db.name }}</div>
+              <div
+                v-for="t in db.tables"
+                :key="t"
+                class="table-row"
+                :ref="setTableEl(`up:${db.name}:${t}`)"
+                @pointerdown="startDrag($event, 'up', db.name, t)"
+              >
+                <span class="table-name">{{ t }}</span>
+                <span class="port port-right" title="拖拽到右侧建立血缘" />
+              </div>
+            </div>
+          </aside>
+
+          <aside class="report-side report-side-right" @scroll="linkRevision++">
+            <div class="side-title">下游目标表（数据库）</div>
+            <div v-for="db in downDbs" :key="db.name" class="db-section">
+              <div class="db-head">{{ db.name }}</div>
+              <div
+                v-for="t in db.tables"
+                :key="t"
+                class="table-row"
+                :ref="setTableEl(`down:${db.name}:${t}`)"
+                @pointerdown="startDrag($event, 'down', db.name, t)"
+              >
+                <span class="port port-left" title="拖拽到左侧建立血缘" />
+                <span class="table-name">{{ t }}</span>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <div class="report-links">
+          <el-table :data="reportLinks" size="small" height="150" highlight-current-row @row-click="onRowClick">
+            <el-table-column label="上游（数据库 · 表）" min-width="180">
+              <template #default="{ row }">
+                <span class="field-source">{{ row.upDb }} · {{ row.upTable }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="处理函数" width="180">
+              <template #default="{ row }">
+                <el-select v-model="row.func" size="small" filterable allow-create default-first-option>
+                  <el-option v-for="f in funcOptions" :key="f" :label="f" :value="f" />
+                </el-select>
+              </template>
+            </el-table-column>
+            <el-table-column label="下游（数据库 · 表）" min-width="180">
+              <template #default="{ row }">
+                <span class="field-target">{{ row.downDb }} · {{ row.downTable }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="80" align="center">
+              <template #default="{ row }">
+                <el-button type="danger" link :icon="Delete" @click.stop="removeLink(row.id)" />
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="report-footer">
+          <span class="report-count">已填报 {{ reportLinks.length }} 条血缘连线</span>
+          <el-button size="small" @click="resetBuilder">重置</el-button>
+          <el-button size="small" @click="lineageDialogVisible = false">取消</el-button>
+          <el-button type="danger" size="small" @click="saveLineage">保存</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -83,7 +187,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
-import { Upload } from '@element-plus/icons-vue'
+import { Connection, Delete } from '@element-plus/icons-vue'
 
 type FieldLink = {
   source: string
@@ -386,8 +490,232 @@ const highlightTable = () => {
   ElMessage.success(`已定位到「${keyword}」及其血缘链路`)
 }
 
-const uploadSql = () => {
-  ElMessage.success(`SQL 文件已解析，生成字段级血缘关系 ${fieldLineage.length} 条（Mock）`)
+const lineageDialogVisible = ref(false)
+
+type DbNode = { name: string; tables: string[] }
+
+const upDbs: DbNode[] = [
+  { name: '票务运营库', tables: ['ticket_sale', 'passenger_info', 'payment_record'] },
+  { name: '基础信息库', tables: ['station_info', 'line_info', 'train_info'] },
+  { name: '设备监控库', tables: ['device_status_log', 'train_operation_log'] },
+  { name: '数据仓库ODS', tables: ['ods_order_detail', 'ods_passenger', 'ods_station'] },
+]
+
+const downDbs: DbNode[] = [
+  { name: '数据仓库DWD', tables: ['dwd_order_detail', 'dwd_payment', 'dwd_ticket'] },
+  { name: '数据仓库DIM', tables: ['dim_passenger', 'dim_station', 'dim_line'] },
+  { name: '数据仓库DWS', tables: ['dws_order_report', 'dws_line_flow'] },
+  { name: '指标中台ADS', tables: ['ads_line_flow', 'ads_operation_kpi'] },
+]
+
+const funcOptions = ['直接映射', 'TO_DATE()', 'NVL()', 'TRIM()', 'CONCAT()', 'CASE WHEN', 'SUM()', 'COUNT()', 'AVG()', 'JOIN 映射']
+
+type ReportLink = {
+  id: number
+  upDb: string
+  upTable: string
+  downDb: string
+  downTable: string
+  func: string
+}
+
+type Point = { x: number; y: number }
+
+const reportLinks = ref<ReportLink[]>([])
+const activeLinkId = ref<number | null>(null)
+const hoverLinkId = ref<number | null>(null)
+const linkRevision = ref(0)
+let reportLinkSeq = 0
+
+const wrapRef = ref<HTMLElement>()
+const tableEls = new Map<string, HTMLElement>()
+
+const setTableEl =
+  (key: string) =>
+  (el: unknown) => {
+    if (el instanceof HTMLElement) tableEls.set(key, el)
+  }
+
+const wrapRect = () => wrapRef.value?.getBoundingClientRect()
+
+const sidePoint = (el: HTMLElement, side: 'left' | 'right'): Point => {
+  const wr = wrapRect()
+  if (!wr) return { x: 0, y: 0 }
+  const r = el.getBoundingClientRect()
+  return { x: r.left - wr.left + (side === 'right' ? r.width : 0), y: r.top - wr.top + r.height / 2 }
+}
+
+type ReportLinkView = ReportLink & { path: string; mid?: Point }
+
+const computedLinks = computed<ReportLinkView[]>(() => {
+  void linkRevision.value
+  const wr = wrapRect()
+  if (!wr) return []
+  return reportLinks.value.map((lnk) => {
+    const sp = tableEls.get(`up:${lnk.upDb}:${lnk.upTable}`)
+    const dp = tableEls.get(`down:${lnk.downDb}:${lnk.downTable}`)
+    if (!sp || !dp) return { ...lnk, path: '' }
+    const s = sidePoint(sp, 'right')
+    const d = sidePoint(dp, 'left')
+    const dx = Math.max(60, (d.x - s.x) / 2)
+    return {
+      ...lnk,
+      path: `M ${s.x} ${s.y} C ${s.x + dx} ${s.y}, ${d.x - dx} ${d.y}, ${d.x} ${d.y}`,
+      mid: { x: (s.x + d.x) / 2, y: (s.y + d.y) / 2 },
+    }
+  })
+})
+
+const hoverTip = computed(() => {
+  const lnk = computedLinks.value.find((l) => l.id === hoverLinkId.value)
+  if (!lnk || !lnk.mid) return null
+  return { x: lnk.mid.x, y: lnk.mid.y, text: `${lnk.upTable} —[${lnk.func}]→ ${lnk.downTable}` }
+})
+
+const dragging = ref<{ side: 'up' | 'down'; key: string; start: Point } | null>(null)
+const dragPos = ref<Point>({ x: 0, y: 0 })
+
+const tempPath = computed(() => {
+  const d = dragging.value
+  if (!d) return ''
+  const p = dragPos.value
+  const dx = Math.max(60, (p.x - d.start.x) / 2)
+  return `M ${d.start.x} ${d.start.y} C ${d.start.x + dx} ${d.start.y}, ${p.x - dx} ${p.y}, ${p.x} ${p.y}`
+})
+
+const toWrapPoint = (e: PointerEvent): Point => {
+  const wr = wrapRect()
+  if (!wr) return { x: 0, y: 0 }
+  return { x: e.clientX - wr.left, y: e.clientY - wr.top }
+}
+
+const startDrag = (e: PointerEvent, side: 'up' | 'down', db: string, table: string) => {
+  if (e.button !== 0) return
+  e.preventDefault()
+  const key = `${side}:${db}:${table}`
+  const el = tableEls.get(key)
+  if (!el) return
+  dragging.value = { side, key, start: sidePoint(el, side === 'up' ? 'right' : 'left') }
+  dragPos.value = dragging.value.start
+  window.addEventListener('pointermove', onDragMove)
+  window.addEventListener('pointerup', onDragUp)
+}
+
+const onDragMove = (e: PointerEvent) => {
+  if (!dragging.value) return
+  dragPos.value = toWrapPoint(e)
+}
+
+const onDragUp = (e: PointerEvent) => {
+  const d = dragging.value
+  if (d) {
+    const p = toWrapPoint(e)
+    const targetSide = d.side === 'up' ? 'down' : 'up'
+    const hit = [...tableEls.entries()].find(([key, el]) => {
+      if (!key.startsWith(`${targetSide}:`)) return false
+      const wr = wrapRect()
+      if (!wr) return false
+      const r = el.getBoundingClientRect()
+      return (
+        p.x >= r.left - wr.left - 8 &&
+        p.x <= r.left - wr.left + r.width + 8 &&
+        p.y >= r.top - wr.top - 8 &&
+        p.y <= r.top - wr.top + r.height + 8
+      )
+    })
+    if (hit) {
+      const targetKey = hit[0]
+      const [, tDb, tTable] = targetKey.split(':')
+      const [, sDb, sTable] = d.key.split(':')
+      const up = d.side === 'up' ? { db: sDb, table: sTable } : { db: tDb, table: tTable }
+      const down = d.side === 'down' ? { db: sDb, table: sTable } : { db: tDb, table: tTable }
+      const dup = reportLinks.value.some((l) => l.upTable === up.table && l.downTable === down.table)
+      if (dup) {
+        ElMessage.warning(`「${up.table} → ${down.table}」已存在，请先删除原连线`)
+      } else {
+        reportLinks.value.push({
+          id: ++reportLinkSeq,
+          upDb: up.db,
+          upTable: up.table,
+          downDb: down.db,
+          downTable: down.table,
+          func: '直接映射',
+        })
+        linkRevision.value++
+      }
+    }
+  }
+  cleanupDrag()
+}
+
+const cleanupDrag = () => {
+  dragging.value = null
+  window.removeEventListener('pointermove', onDragMove)
+  window.removeEventListener('pointerup', onDragUp)
+}
+
+const openLineageDialog = () => {
+  reportLinks.value = []
+  activeLinkId.value = null
+  lineageDialogVisible.value = true
+  nextTick(() => linkRevision.value++)
+}
+
+const resetBuilder = () => {
+  reportLinks.value = []
+  activeLinkId.value = null
+  linkRevision.value++
+}
+
+const removeLink = (id: number) => {
+  reportLinks.value = reportLinks.value.filter((l) => l.id !== id)
+  if (activeLinkId.value === id) activeLinkId.value = null
+  linkRevision.value++
+}
+
+const onRowClick = (row: ReportLink) => {
+  activeLinkId.value = row.id
+}
+
+const ensureReportTable = (table: string, field: string, side: 'up' | 'down') => {
+  if (!tableFields[table]) {
+    tableFields[table] = [field]
+    const layer: Layer = /^(dws|ads|rpt|report)/i.test(table)
+      ? 'target'
+      : /^(dim|dwd|ods|mid|fct)/i.test(table)
+        ? 'mid'
+        : side === 'up'
+          ? 'source'
+          : 'mid'
+    layerTables[layer].push(table)
+    tableMeta[table] = { label: `新增表 ${table}`, layer }
+  } else if (field && !tableFields[table].includes(field)) {
+    tableFields[table].push(field)
+  }
+}
+
+const saveLineage = () => {
+  if (!reportLinks.value.length) {
+    ElMessage.warning('请先从左侧拖拽连线到右侧，建立至少一条血缘关系')
+    return
+  }
+  const baseCount = fieldLineage.length
+  reportLinks.value.forEach((lnk) => {
+    const source = `${lnk.upTable}.${lnk.upTable}_id`
+    const target = `${lnk.downTable}.${lnk.downTable}_id`
+    fieldLineage.push({
+      source,
+      target,
+      func: lnk.func || '直接映射',
+      flow: Math.round(Math.random() * 5000) + 500,
+    })
+    ensureReportTable(lnk.upTable, `${lnk.upTable}_id`, 'up')
+    ensureReportTable(lnk.downTable, `${lnk.downTable}_id`, 'down')
+  })
+  renderLineage()
+  lineageDialogVisible.value = false
+  reportLinks.value = []
+  ElMessage.success(`血缘填报成功，新增 ${fieldLineage.length - baseCount} 条字段级血缘关系`)
 }
 
 const handleResize = () => lineageChart?.resize()
@@ -395,6 +723,25 @@ const handleResize = () => lineageChart?.resize()
 watch(activeTab, () => {
   if (activeTab.value === 'visual') {
     nextTick(() => handleResize())
+  }
+})
+
+let reportResizeObserver: ResizeObserver | null = null
+
+watch(lineageDialogVisible, (visible) => {
+  if (visible) {
+    nextTick(() => {
+      // 弹框打开后重算连线坐标，并监听容器尺寸变化自动刷新
+      linkRevision.value++
+      reportResizeObserver?.disconnect()
+      if (wrapRef.value && typeof ResizeObserver !== 'undefined') {
+        reportResizeObserver = new ResizeObserver(() => linkRevision.value++)
+        reportResizeObserver.observe(wrapRef.value)
+      }
+    })
+  } else {
+    reportResizeObserver?.disconnect()
+    reportResizeObserver = null
   }
 })
 
@@ -413,11 +760,30 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
   chartResizeObserver?.disconnect()
+  reportResizeObserver?.disconnect()
   lineageChart?.dispose()
 })
 </script>
 
 <style lang="scss" scoped>
+/* el-dialog 渲染为子组件内部节点，需用全局选择器才能确保命中 */
+:global(.lineage-report-dialog .el-dialog__header) {
+  padding: 12px 20px;
+  margin-right: 0;
+}
+
+:global(.lineage-report-dialog .el-dialog__body) {
+  padding: 8px 20px 4px;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 128px);
+  min-height: 420px;
+}
+
+:global(.lineage-report-dialog .el-dialog__footer) {
+  padding: 8px 20px 14px;
+}
+
 .lineage-page {
   height: 100%;
 }
@@ -552,5 +918,184 @@ onBeforeUnmount(() => {
   color: #da251d;
   font-weight: 600;
   font-size: 12px;
+}
+
+.lineage-report-dialog {
+  .report-hint {
+    margin-bottom: 10px;
+
+    .hint-strong {
+      font-weight: 700;
+      color: #da251d;
+      margin: 0 2px;
+    }
+  }
+
+  .report-builder {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: calc(100vh - 190px);
+    min-height: 420px;
+  }
+
+  .report-canvas-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    border: 1px solid #e5e9f0;
+    border-radius: 8px;
+    background-color: #fbfcfe;
+    background-image: radial-gradient(#e8ecf3 1px, transparent 1px);
+    background-size: 20px 20px;
+    overflow: hidden;
+  }
+
+  .report-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+
+    path {
+      fill: none;
+      stroke: #c7cdd8;
+      stroke-width: 1.6;
+      pointer-events: strokePainted;
+      cursor: pointer;
+
+      &:hover,
+      &.is-active {
+        stroke: #da251d;
+        stroke-width: 2.6;
+      }
+    }
+  }
+
+  .report-temp-path {
+    stroke: #da251d;
+    stroke-width: 1.6;
+    stroke-dasharray: 6 4;
+    pointer-events: none;
+  }
+
+  .report-hover-tip {
+    position: absolute;
+    z-index: 5;
+    max-width: 320px;
+    background: rgba(42, 46, 53, 0.88);
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    pointer-events: none;
+    transform: translate(-50%, -135%);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .report-side {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 240px;
+    overflow-y: auto;
+    background: #fff;
+    z-index: 1;
+  }
+
+  .report-side-left {
+    left: 0;
+    border-right: 1px solid #edf0f5;
+  }
+
+  .report-side-right {
+    right: 0;
+    border-left: 1px solid #edf0f5;
+  }
+
+  .side-title {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f7f8fa;
+    font-size: 12px;
+    font-weight: 700;
+    color: #4a4a4a;
+    padding: 8px 12px;
+    border-bottom: 1px solid #edf0f5;
+  }
+
+  .db-section {
+    padding: 0 0 6px;
+  }
+
+  .db-head {
+    font-size: 12px;
+    color: #8c8c8c;
+    padding: 10px 12px 4px;
+    font-weight: 600;
+  }
+
+  .table-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    cursor: grab;
+    border-radius: 6px;
+    user-select: none;
+
+    &:hover {
+      background: #f3f6fb;
+      .port {
+        border-color: #da251d;
+        background: #fff1f0;
+      }
+    }
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    .table-name {
+      font-size: 12px;
+      color: #333;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .port {
+    flex: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #b6bfcb;
+  }
+
+  .report-links {
+    flex: 0 0 auto;
+  }
+
+  .report-footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .report-count {
+    flex: 1;
+    font-size: 12px;
+    color: #8c8c8c;
+  }
 }
 </style>

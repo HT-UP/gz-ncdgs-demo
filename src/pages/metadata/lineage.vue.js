@@ -1,7 +1,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import * as echarts from 'echarts';
-import { Upload } from '@element-plus/icons-vue';
+import { Connection, Delete } from '@element-plus/icons-vue';
 const fieldLineage = [
     { source: 'ticket_sale.order_id', target: 'dwd_order_detail.order_id', func: '直接映射', flow: 128640 },
     { source: 'ticket_sale.order_date', target: 'dwd_order_detail.order_date', func: 'TO_DATE(order_date)', flow: 128640 },
@@ -264,13 +264,228 @@ const highlightTable = () => {
     renderLineage(keyword);
     ElMessage.success(`已定位到「${keyword}」及其血缘链路`);
 };
-const uploadSql = () => {
-    ElMessage.success(`SQL 文件已解析，生成字段级血缘关系 ${fieldLineage.length} 条（Mock）`);
+const lineageDialogVisible = ref(false);
+const upDbs = [
+    { name: '票务运营库', tables: ['ticket_sale', 'passenger_info', 'payment_record'] },
+    { name: '基础信息库', tables: ['station_info', 'line_info', 'train_info'] },
+    { name: '设备监控库', tables: ['device_status_log', 'train_operation_log'] },
+    { name: '数据仓库ODS', tables: ['ods_order_detail', 'ods_passenger', 'ods_station'] },
+];
+const downDbs = [
+    { name: '数据仓库DWD', tables: ['dwd_order_detail', 'dwd_payment', 'dwd_ticket'] },
+    { name: '数据仓库DIM', tables: ['dim_passenger', 'dim_station', 'dim_line'] },
+    { name: '数据仓库DWS', tables: ['dws_order_report', 'dws_line_flow'] },
+    { name: '指标中台ADS', tables: ['ads_line_flow', 'ads_operation_kpi'] },
+];
+const funcOptions = ['直接映射', 'TO_DATE()', 'NVL()', 'TRIM()', 'CONCAT()', 'CASE WHEN', 'SUM()', 'COUNT()', 'AVG()', 'JOIN 映射'];
+const reportLinks = ref([]);
+const activeLinkId = ref(null);
+const hoverLinkId = ref(null);
+const linkRevision = ref(0);
+let reportLinkSeq = 0;
+const wrapRef = ref();
+const tableEls = new Map();
+const setTableEl = (key) => (el) => {
+    if (el instanceof HTMLElement)
+        tableEls.set(key, el);
+};
+const wrapRect = () => wrapRef.value?.getBoundingClientRect();
+const sidePoint = (el, side) => {
+    const wr = wrapRect();
+    if (!wr)
+        return { x: 0, y: 0 };
+    const r = el.getBoundingClientRect();
+    return { x: r.left - wr.left + (side === 'right' ? r.width : 0), y: r.top - wr.top + r.height / 2 };
+};
+const computedLinks = computed(() => {
+    void linkRevision.value;
+    const wr = wrapRect();
+    if (!wr)
+        return [];
+    return reportLinks.value.map((lnk) => {
+        const sp = tableEls.get(`up:${lnk.upDb}:${lnk.upTable}`);
+        const dp = tableEls.get(`down:${lnk.downDb}:${lnk.downTable}`);
+        if (!sp || !dp)
+            return { ...lnk, path: '' };
+        const s = sidePoint(sp, 'right');
+        const d = sidePoint(dp, 'left');
+        const dx = Math.max(60, (d.x - s.x) / 2);
+        return {
+            ...lnk,
+            path: `M ${s.x} ${s.y} C ${s.x + dx} ${s.y}, ${d.x - dx} ${d.y}, ${d.x} ${d.y}`,
+            mid: { x: (s.x + d.x) / 2, y: (s.y + d.y) / 2 },
+        };
+    });
+});
+const hoverTip = computed(() => {
+    const lnk = computedLinks.value.find((l) => l.id === hoverLinkId.value);
+    if (!lnk || !lnk.mid)
+        return null;
+    return { x: lnk.mid.x, y: lnk.mid.y, text: `${lnk.upTable} —[${lnk.func}]→ ${lnk.downTable}` };
+});
+const dragging = ref(null);
+const dragPos = ref({ x: 0, y: 0 });
+const tempPath = computed(() => {
+    const d = dragging.value;
+    if (!d)
+        return '';
+    const p = dragPos.value;
+    const dx = Math.max(60, (p.x - d.start.x) / 2);
+    return `M ${d.start.x} ${d.start.y} C ${d.start.x + dx} ${d.start.y}, ${p.x - dx} ${p.y}, ${p.x} ${p.y}`;
+});
+const toWrapPoint = (e) => {
+    const wr = wrapRect();
+    if (!wr)
+        return { x: 0, y: 0 };
+    return { x: e.clientX - wr.left, y: e.clientY - wr.top };
+};
+const startDrag = (e, side, db, table) => {
+    if (e.button !== 0)
+        return;
+    e.preventDefault();
+    const key = `${side}:${db}:${table}`;
+    const el = tableEls.get(key);
+    if (!el)
+        return;
+    dragging.value = { side, key, start: sidePoint(el, side === 'up' ? 'right' : 'left') };
+    dragPos.value = dragging.value.start;
+    window.addEventListener('pointermove', onDragMove);
+    window.addEventListener('pointerup', onDragUp);
+};
+const onDragMove = (e) => {
+    if (!dragging.value)
+        return;
+    dragPos.value = toWrapPoint(e);
+};
+const onDragUp = (e) => {
+    const d = dragging.value;
+    if (d) {
+        const p = toWrapPoint(e);
+        const targetSide = d.side === 'up' ? 'down' : 'up';
+        const hit = [...tableEls.entries()].find(([key, el]) => {
+            if (!key.startsWith(`${targetSide}:`))
+                return false;
+            const wr = wrapRect();
+            if (!wr)
+                return false;
+            const r = el.getBoundingClientRect();
+            return (p.x >= r.left - wr.left - 8 &&
+                p.x <= r.left - wr.left + r.width + 8 &&
+                p.y >= r.top - wr.top - 8 &&
+                p.y <= r.top - wr.top + r.height + 8);
+        });
+        if (hit) {
+            const targetKey = hit[0];
+            const [, tDb, tTable] = targetKey.split(':');
+            const [, sDb, sTable] = d.key.split(':');
+            const up = d.side === 'up' ? { db: sDb, table: sTable } : { db: tDb, table: tTable };
+            const down = d.side === 'down' ? { db: sDb, table: sTable } : { db: tDb, table: tTable };
+            const dup = reportLinks.value.some((l) => l.upTable === up.table && l.downTable === down.table);
+            if (dup) {
+                ElMessage.warning(`「${up.table} → ${down.table}」已存在，请先删除原连线`);
+            }
+            else {
+                reportLinks.value.push({
+                    id: ++reportLinkSeq,
+                    upDb: up.db,
+                    upTable: up.table,
+                    downDb: down.db,
+                    downTable: down.table,
+                    func: '直接映射',
+                });
+                linkRevision.value++;
+            }
+        }
+    }
+    cleanupDrag();
+};
+const cleanupDrag = () => {
+    dragging.value = null;
+    window.removeEventListener('pointermove', onDragMove);
+    window.removeEventListener('pointerup', onDragUp);
+};
+const openLineageDialog = () => {
+    reportLinks.value = [];
+    activeLinkId.value = null;
+    lineageDialogVisible.value = true;
+    nextTick(() => linkRevision.value++);
+};
+const resetBuilder = () => {
+    reportLinks.value = [];
+    activeLinkId.value = null;
+    linkRevision.value++;
+};
+const removeLink = (id) => {
+    reportLinks.value = reportLinks.value.filter((l) => l.id !== id);
+    if (activeLinkId.value === id)
+        activeLinkId.value = null;
+    linkRevision.value++;
+};
+const onRowClick = (row) => {
+    activeLinkId.value = row.id;
+};
+const ensureReportTable = (table, field, side) => {
+    if (!tableFields[table]) {
+        tableFields[table] = [field];
+        const layer = /^(dws|ads|rpt|report)/i.test(table)
+            ? 'target'
+            : /^(dim|dwd|ods|mid|fct)/i.test(table)
+                ? 'mid'
+                : side === 'up'
+                    ? 'source'
+                    : 'mid';
+        layerTables[layer].push(table);
+        tableMeta[table] = { label: `新增表 ${table}`, layer };
+    }
+    else if (field && !tableFields[table].includes(field)) {
+        tableFields[table].push(field);
+    }
+};
+const saveLineage = () => {
+    if (!reportLinks.value.length) {
+        ElMessage.warning('请先从左侧拖拽连线到右侧，建立至少一条血缘关系');
+        return;
+    }
+    const baseCount = fieldLineage.length;
+    reportLinks.value.forEach((lnk) => {
+        const source = `${lnk.upTable}.${lnk.upTable}_id`;
+        const target = `${lnk.downTable}.${lnk.downTable}_id`;
+        fieldLineage.push({
+            source,
+            target,
+            func: lnk.func || '直接映射',
+            flow: Math.round(Math.random() * 5000) + 500,
+        });
+        ensureReportTable(lnk.upTable, `${lnk.upTable}_id`, 'up');
+        ensureReportTable(lnk.downTable, `${lnk.downTable}_id`, 'down');
+    });
+    renderLineage();
+    lineageDialogVisible.value = false;
+    reportLinks.value = [];
+    ElMessage.success(`血缘填报成功，新增 ${fieldLineage.length - baseCount} 条字段级血缘关系`);
 };
 const handleResize = () => lineageChart?.resize();
 watch(activeTab, () => {
     if (activeTab.value === 'visual') {
         nextTick(() => handleResize());
+    }
+});
+let reportResizeObserver = null;
+watch(lineageDialogVisible, (visible) => {
+    if (visible) {
+        nextTick(() => {
+            // 弹框打开后重算连线坐标，并监听容器尺寸变化自动刷新
+            linkRevision.value++;
+            reportResizeObserver?.disconnect();
+            if (wrapRef.value && typeof ResizeObserver !== 'undefined') {
+                reportResizeObserver = new ResizeObserver(() => linkRevision.value++);
+                reportResizeObserver.observe(wrapRef.value);
+            }
+        });
+    }
+    else {
+        reportResizeObserver?.disconnect();
+        reportResizeObserver = null;
     }
 });
 let chartResizeObserver = null;
@@ -286,14 +501,19 @@ onMounted(() => {
 onBeforeUnmount(() => {
     window.removeEventListener('resize', handleResize);
     chartResizeObserver?.disconnect();
+    reportResizeObserver?.disconnect();
     lineageChart?.dispose();
 });
 debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};
 let __VLS_components;
 let __VLS_directives;
+/** @type {__VLS_StyleScopedClasses['lineage-report-dialog']} */ ;
+/** @type {__VLS_StyleScopedClasses['lineage-report-dialog']} */ ;
 /** @type {__VLS_StyleScopedClasses['lineage-anomaly-pane']} */ ;
 /** @type {__VLS_StyleScopedClasses['lineage-detail-pane']} */ ;
+/** @type {__VLS_StyleScopedClasses['lineage-report-dialog']} */ ;
+/** @type {__VLS_StyleScopedClasses['port']} */ ;
 // CSS variable injection 
 // CSS variable injection end 
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
@@ -387,18 +607,18 @@ const __VLS_24 = {}.ElButton;
 const __VLS_25 = __VLS_asFunctionalComponent(__VLS_24, new __VLS_24({
     ...{ 'onClick': {} },
     size: "small",
-    icon: (__VLS_ctx.Upload),
+    icon: (__VLS_ctx.Connection),
 }));
 const __VLS_26 = __VLS_25({
     ...{ 'onClick': {} },
     size: "small",
-    icon: (__VLS_ctx.Upload),
+    icon: (__VLS_ctx.Connection),
 }, ...__VLS_functionalComponentArgsRest(__VLS_25));
 let __VLS_28;
 let __VLS_29;
 let __VLS_30;
 const __VLS_31 = {
-    onClick: (__VLS_ctx.uploadSql)
+    onClick: (__VLS_ctx.openLineageDialog)
 };
 __VLS_27.slots.default;
 var __VLS_27;
@@ -679,6 +899,400 @@ for (const [stat] of __VLS_getVForSourceType((__VLS_ctx.anomalyStats))) {
 }
 var __VLS_75;
 var __VLS_3;
+const __VLS_84 = {}.ElDialog;
+/** @type {[typeof __VLS_components.ElDialog, typeof __VLS_components.elDialog, typeof __VLS_components.ElDialog, typeof __VLS_components.elDialog, ]} */ ;
+// @ts-ignore
+const __VLS_85 = __VLS_asFunctionalComponent(__VLS_84, new __VLS_84({
+    modelValue: (__VLS_ctx.lineageDialogVisible),
+    title: "血缘填报 · 拖拽连线",
+    fullscreen: true,
+    ...{ class: "lineage-report-dialog" },
+    destroyOnClose: true,
+}));
+const __VLS_86 = __VLS_85({
+    modelValue: (__VLS_ctx.lineageDialogVisible),
+    title: "血缘填报 · 拖拽连线",
+    fullscreen: true,
+    ...{ class: "lineage-report-dialog" },
+    destroyOnClose: true,
+}, ...__VLS_functionalComponentArgsRest(__VLS_85));
+__VLS_87.slots.default;
+const __VLS_88 = {}.ElAlert;
+/** @type {[typeof __VLS_components.ElAlert, typeof __VLS_components.elAlert, typeof __VLS_components.ElAlert, typeof __VLS_components.elAlert, ]} */ ;
+// @ts-ignore
+const __VLS_89 = __VLS_asFunctionalComponent(__VLS_88, new __VLS_88({
+    ...{ class: "report-hint" },
+    type: "info",
+    closable: (false),
+    showIcon: true,
+}));
+const __VLS_90 = __VLS_89({
+    ...{ class: "report-hint" },
+    type: "info",
+    closable: (false),
+    showIcon: true,
+}, ...__VLS_functionalComponentArgsRest(__VLS_89));
+__VLS_91.slots.default;
+{
+    const { title: __VLS_thisSlot } = __VLS_91.slots;
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+        ...{ class: "hint-strong" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+        ...{ class: "hint-strong" },
+    });
+}
+var __VLS_91;
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "report-builder" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    id: "report-canvas",
+    ref: "wrapRef",
+    ...{ class: "report-canvas-wrap" },
+});
+/** @type {typeof __VLS_ctx.wrapRef} */ ;
+__VLS_asFunctionalElement(__VLS_intrinsicElements.svg, __VLS_intrinsicElements.svg)({
+    ...{ class: "report-svg" },
+});
+for (const [lnk] of __VLS_getVForSourceType((__VLS_ctx.computedLinks))) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.path)({
+        ...{ onMouseenter: (...[$event]) => {
+                __VLS_ctx.hoverLinkId = lnk.id;
+            } },
+        ...{ onMouseleave: (...[$event]) => {
+                __VLS_ctx.hoverLinkId = null;
+            } },
+        key: (lnk.id),
+        d: (lnk.path),
+        ...{ class: ({ 'is-active': __VLS_ctx.activeLinkId === lnk.id || __VLS_ctx.hoverLinkId === lnk.id }) },
+    });
+}
+if (__VLS_ctx.dragging) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.path)({
+        d: (__VLS_ctx.tempPath),
+        ...{ class: "report-temp-path" },
+    });
+}
+if (__VLS_ctx.hoverTip) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "report-hover-tip" },
+        ...{ style: ({ left: __VLS_ctx.hoverTip.x + 'px', top: __VLS_ctx.hoverTip.y + 'px' }) },
+    });
+    (__VLS_ctx.hoverTip.text);
+}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.aside, __VLS_intrinsicElements.aside)({
+    ...{ onScroll: (...[$event]) => {
+            __VLS_ctx.linkRevision++;
+        } },
+    ...{ class: "report-side report-side-left" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "side-title" },
+});
+for (const [db] of __VLS_getVForSourceType((__VLS_ctx.upDbs))) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        key: (db.name),
+        ...{ class: "db-section" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "db-head" },
+    });
+    (db.name);
+    for (const [t] of __VLS_getVForSourceType((db.tables))) {
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+            ...{ onPointerdown: (...[$event]) => {
+                    __VLS_ctx.startDrag($event, 'up', db.name, t);
+                } },
+            key: (t),
+            ...{ class: "table-row" },
+            ref: (__VLS_ctx.setTableEl(`up:${db.name}:${t}`)),
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+            ...{ class: "table-name" },
+        });
+        (t);
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span)({
+            ...{ class: "port port-right" },
+            title: "拖拽到右侧建立血缘",
+        });
+    }
+}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.aside, __VLS_intrinsicElements.aside)({
+    ...{ onScroll: (...[$event]) => {
+            __VLS_ctx.linkRevision++;
+        } },
+    ...{ class: "report-side report-side-right" },
+});
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "side-title" },
+});
+for (const [db] of __VLS_getVForSourceType((__VLS_ctx.downDbs))) {
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        key: (db.name),
+        ...{ class: "db-section" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "db-head" },
+    });
+    (db.name);
+    for (const [t] of __VLS_getVForSourceType((db.tables))) {
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+            ...{ onPointerdown: (...[$event]) => {
+                    __VLS_ctx.startDrag($event, 'down', db.name, t);
+                } },
+            key: (t),
+            ...{ class: "table-row" },
+            ref: (__VLS_ctx.setTableEl(`down:${db.name}:${t}`)),
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span)({
+            ...{ class: "port port-left" },
+            title: "拖拽到左侧建立血缘",
+        });
+        __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+            ...{ class: "table-name" },
+        });
+        (t);
+    }
+}
+__VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+    ...{ class: "report-links" },
+});
+const __VLS_92 = {}.ElTable;
+/** @type {[typeof __VLS_components.ElTable, typeof __VLS_components.elTable, typeof __VLS_components.ElTable, typeof __VLS_components.elTable, ]} */ ;
+// @ts-ignore
+const __VLS_93 = __VLS_asFunctionalComponent(__VLS_92, new __VLS_92({
+    ...{ 'onRowClick': {} },
+    data: (__VLS_ctx.reportLinks),
+    size: "small",
+    height: "150",
+    highlightCurrentRow: true,
+}));
+const __VLS_94 = __VLS_93({
+    ...{ 'onRowClick': {} },
+    data: (__VLS_ctx.reportLinks),
+    size: "small",
+    height: "150",
+    highlightCurrentRow: true,
+}, ...__VLS_functionalComponentArgsRest(__VLS_93));
+let __VLS_96;
+let __VLS_97;
+let __VLS_98;
+const __VLS_99 = {
+    onRowClick: (__VLS_ctx.onRowClick)
+};
+__VLS_95.slots.default;
+const __VLS_100 = {}.ElTableColumn;
+/** @type {[typeof __VLS_components.ElTableColumn, typeof __VLS_components.elTableColumn, typeof __VLS_components.ElTableColumn, typeof __VLS_components.elTableColumn, ]} */ ;
+// @ts-ignore
+const __VLS_101 = __VLS_asFunctionalComponent(__VLS_100, new __VLS_100({
+    label: "上游（数据库 · 表）",
+    minWidth: "180",
+}));
+const __VLS_102 = __VLS_101({
+    label: "上游（数据库 · 表）",
+    minWidth: "180",
+}, ...__VLS_functionalComponentArgsRest(__VLS_101));
+__VLS_103.slots.default;
+{
+    const { default: __VLS_thisSlot } = __VLS_103.slots;
+    const [{ row }] = __VLS_getSlotParams(__VLS_thisSlot);
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+        ...{ class: "field-source" },
+    });
+    (row.upDb);
+    (row.upTable);
+}
+var __VLS_103;
+const __VLS_104 = {}.ElTableColumn;
+/** @type {[typeof __VLS_components.ElTableColumn, typeof __VLS_components.elTableColumn, typeof __VLS_components.ElTableColumn, typeof __VLS_components.elTableColumn, ]} */ ;
+// @ts-ignore
+const __VLS_105 = __VLS_asFunctionalComponent(__VLS_104, new __VLS_104({
+    label: "处理函数",
+    width: "180",
+}));
+const __VLS_106 = __VLS_105({
+    label: "处理函数",
+    width: "180",
+}, ...__VLS_functionalComponentArgsRest(__VLS_105));
+__VLS_107.slots.default;
+{
+    const { default: __VLS_thisSlot } = __VLS_107.slots;
+    const [{ row }] = __VLS_getSlotParams(__VLS_thisSlot);
+    const __VLS_108 = {}.ElSelect;
+    /** @type {[typeof __VLS_components.ElSelect, typeof __VLS_components.elSelect, typeof __VLS_components.ElSelect, typeof __VLS_components.elSelect, ]} */ ;
+    // @ts-ignore
+    const __VLS_109 = __VLS_asFunctionalComponent(__VLS_108, new __VLS_108({
+        modelValue: (row.func),
+        size: "small",
+        filterable: true,
+        allowCreate: true,
+        defaultFirstOption: true,
+    }));
+    const __VLS_110 = __VLS_109({
+        modelValue: (row.func),
+        size: "small",
+        filterable: true,
+        allowCreate: true,
+        defaultFirstOption: true,
+    }, ...__VLS_functionalComponentArgsRest(__VLS_109));
+    __VLS_111.slots.default;
+    for (const [f] of __VLS_getVForSourceType((__VLS_ctx.funcOptions))) {
+        const __VLS_112 = {}.ElOption;
+        /** @type {[typeof __VLS_components.ElOption, typeof __VLS_components.elOption, ]} */ ;
+        // @ts-ignore
+        const __VLS_113 = __VLS_asFunctionalComponent(__VLS_112, new __VLS_112({
+            key: (f),
+            label: (f),
+            value: (f),
+        }));
+        const __VLS_114 = __VLS_113({
+            key: (f),
+            label: (f),
+            value: (f),
+        }, ...__VLS_functionalComponentArgsRest(__VLS_113));
+    }
+    var __VLS_111;
+}
+var __VLS_107;
+const __VLS_116 = {}.ElTableColumn;
+/** @type {[typeof __VLS_components.ElTableColumn, typeof __VLS_components.elTableColumn, typeof __VLS_components.ElTableColumn, typeof __VLS_components.elTableColumn, ]} */ ;
+// @ts-ignore
+const __VLS_117 = __VLS_asFunctionalComponent(__VLS_116, new __VLS_116({
+    label: "下游（数据库 · 表）",
+    minWidth: "180",
+}));
+const __VLS_118 = __VLS_117({
+    label: "下游（数据库 · 表）",
+    minWidth: "180",
+}, ...__VLS_functionalComponentArgsRest(__VLS_117));
+__VLS_119.slots.default;
+{
+    const { default: __VLS_thisSlot } = __VLS_119.slots;
+    const [{ row }] = __VLS_getSlotParams(__VLS_thisSlot);
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+        ...{ class: "field-target" },
+    });
+    (row.downDb);
+    (row.downTable);
+}
+var __VLS_119;
+const __VLS_120 = {}.ElTableColumn;
+/** @type {[typeof __VLS_components.ElTableColumn, typeof __VLS_components.elTableColumn, typeof __VLS_components.ElTableColumn, typeof __VLS_components.elTableColumn, ]} */ ;
+// @ts-ignore
+const __VLS_121 = __VLS_asFunctionalComponent(__VLS_120, new __VLS_120({
+    label: "操作",
+    width: "80",
+    align: "center",
+}));
+const __VLS_122 = __VLS_121({
+    label: "操作",
+    width: "80",
+    align: "center",
+}, ...__VLS_functionalComponentArgsRest(__VLS_121));
+__VLS_123.slots.default;
+{
+    const { default: __VLS_thisSlot } = __VLS_123.slots;
+    const [{ row }] = __VLS_getSlotParams(__VLS_thisSlot);
+    const __VLS_124 = {}.ElButton;
+    /** @type {[typeof __VLS_components.ElButton, typeof __VLS_components.elButton, ]} */ ;
+    // @ts-ignore
+    const __VLS_125 = __VLS_asFunctionalComponent(__VLS_124, new __VLS_124({
+        ...{ 'onClick': {} },
+        type: "danger",
+        link: true,
+        icon: (__VLS_ctx.Delete),
+    }));
+    const __VLS_126 = __VLS_125({
+        ...{ 'onClick': {} },
+        type: "danger",
+        link: true,
+        icon: (__VLS_ctx.Delete),
+    }, ...__VLS_functionalComponentArgsRest(__VLS_125));
+    let __VLS_128;
+    let __VLS_129;
+    let __VLS_130;
+    const __VLS_131 = {
+        onClick: (...[$event]) => {
+            __VLS_ctx.removeLink(row.id);
+        }
+    };
+    var __VLS_127;
+}
+var __VLS_123;
+var __VLS_95;
+{
+    const { footer: __VLS_thisSlot } = __VLS_87.slots;
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
+        ...{ class: "report-footer" },
+    });
+    __VLS_asFunctionalElement(__VLS_intrinsicElements.span, __VLS_intrinsicElements.span)({
+        ...{ class: "report-count" },
+    });
+    (__VLS_ctx.reportLinks.length);
+    const __VLS_132 = {}.ElButton;
+    /** @type {[typeof __VLS_components.ElButton, typeof __VLS_components.elButton, typeof __VLS_components.ElButton, typeof __VLS_components.elButton, ]} */ ;
+    // @ts-ignore
+    const __VLS_133 = __VLS_asFunctionalComponent(__VLS_132, new __VLS_132({
+        ...{ 'onClick': {} },
+        size: "small",
+    }));
+    const __VLS_134 = __VLS_133({
+        ...{ 'onClick': {} },
+        size: "small",
+    }, ...__VLS_functionalComponentArgsRest(__VLS_133));
+    let __VLS_136;
+    let __VLS_137;
+    let __VLS_138;
+    const __VLS_139 = {
+        onClick: (__VLS_ctx.resetBuilder)
+    };
+    __VLS_135.slots.default;
+    var __VLS_135;
+    const __VLS_140 = {}.ElButton;
+    /** @type {[typeof __VLS_components.ElButton, typeof __VLS_components.elButton, typeof __VLS_components.ElButton, typeof __VLS_components.elButton, ]} */ ;
+    // @ts-ignore
+    const __VLS_141 = __VLS_asFunctionalComponent(__VLS_140, new __VLS_140({
+        ...{ 'onClick': {} },
+        size: "small",
+    }));
+    const __VLS_142 = __VLS_141({
+        ...{ 'onClick': {} },
+        size: "small",
+    }, ...__VLS_functionalComponentArgsRest(__VLS_141));
+    let __VLS_144;
+    let __VLS_145;
+    let __VLS_146;
+    const __VLS_147 = {
+        onClick: (...[$event]) => {
+            __VLS_ctx.lineageDialogVisible = false;
+        }
+    };
+    __VLS_143.slots.default;
+    var __VLS_143;
+    const __VLS_148 = {}.ElButton;
+    /** @type {[typeof __VLS_components.ElButton, typeof __VLS_components.elButton, typeof __VLS_components.ElButton, typeof __VLS_components.elButton, ]} */ ;
+    // @ts-ignore
+    const __VLS_149 = __VLS_asFunctionalComponent(__VLS_148, new __VLS_148({
+        ...{ 'onClick': {} },
+        type: "danger",
+        size: "small",
+    }));
+    const __VLS_150 = __VLS_149({
+        ...{ 'onClick': {} },
+        type: "danger",
+        size: "small",
+    }, ...__VLS_functionalComponentArgsRest(__VLS_149));
+    let __VLS_152;
+    let __VLS_153;
+    let __VLS_154;
+    const __VLS_155 = {
+        onClick: (__VLS_ctx.saveLineage)
+    };
+    __VLS_151.slots.default;
+    var __VLS_151;
+}
+var __VLS_87;
 /** @type {__VLS_StyleScopedClasses['standard-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['lineage-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['lineage-tabs-wrap']} */ ;
@@ -704,11 +1318,44 @@ var __VLS_3;
 /** @type {__VLS_StyleScopedClasses['anomaly-stat']} */ ;
 /** @type {__VLS_StyleScopedClasses['anomaly-stat-value']} */ ;
 /** @type {__VLS_StyleScopedClasses['anomaly-stat-label']} */ ;
+/** @type {__VLS_StyleScopedClasses['lineage-report-dialog']} */ ;
+/** @type {__VLS_StyleScopedClasses['report-hint']} */ ;
+/** @type {__VLS_StyleScopedClasses['hint-strong']} */ ;
+/** @type {__VLS_StyleScopedClasses['hint-strong']} */ ;
+/** @type {__VLS_StyleScopedClasses['report-builder']} */ ;
+/** @type {__VLS_StyleScopedClasses['report-canvas-wrap']} */ ;
+/** @type {__VLS_StyleScopedClasses['report-svg']} */ ;
+/** @type {__VLS_StyleScopedClasses['report-temp-path']} */ ;
+/** @type {__VLS_StyleScopedClasses['report-hover-tip']} */ ;
+/** @type {__VLS_StyleScopedClasses['report-side']} */ ;
+/** @type {__VLS_StyleScopedClasses['report-side-left']} */ ;
+/** @type {__VLS_StyleScopedClasses['side-title']} */ ;
+/** @type {__VLS_StyleScopedClasses['db-section']} */ ;
+/** @type {__VLS_StyleScopedClasses['db-head']} */ ;
+/** @type {__VLS_StyleScopedClasses['table-row']} */ ;
+/** @type {__VLS_StyleScopedClasses['table-name']} */ ;
+/** @type {__VLS_StyleScopedClasses['port']} */ ;
+/** @type {__VLS_StyleScopedClasses['port-right']} */ ;
+/** @type {__VLS_StyleScopedClasses['report-side']} */ ;
+/** @type {__VLS_StyleScopedClasses['report-side-right']} */ ;
+/** @type {__VLS_StyleScopedClasses['side-title']} */ ;
+/** @type {__VLS_StyleScopedClasses['db-section']} */ ;
+/** @type {__VLS_StyleScopedClasses['db-head']} */ ;
+/** @type {__VLS_StyleScopedClasses['table-row']} */ ;
+/** @type {__VLS_StyleScopedClasses['port']} */ ;
+/** @type {__VLS_StyleScopedClasses['port-left']} */ ;
+/** @type {__VLS_StyleScopedClasses['table-name']} */ ;
+/** @type {__VLS_StyleScopedClasses['report-links']} */ ;
+/** @type {__VLS_StyleScopedClasses['field-source']} */ ;
+/** @type {__VLS_StyleScopedClasses['field-target']} */ ;
+/** @type {__VLS_StyleScopedClasses['report-footer']} */ ;
+/** @type {__VLS_StyleScopedClasses['report-count']} */ ;
 var __VLS_dollars;
 const __VLS_self = (await import('vue')).defineComponent({
     setup() {
         return {
-            Upload: Upload,
+            Connection: Connection,
+            Delete: Delete,
             legendItems: legendItems,
             anomalies: anomalies,
             anomalyStats: anomalyStats,
@@ -719,7 +1366,26 @@ const __VLS_self = (await import('vue')).defineComponent({
             targetTables: targetTables,
             filteredDetails: filteredDetails,
             highlightTable: highlightTable,
-            uploadSql: uploadSql,
+            lineageDialogVisible: lineageDialogVisible,
+            upDbs: upDbs,
+            downDbs: downDbs,
+            funcOptions: funcOptions,
+            reportLinks: reportLinks,
+            activeLinkId: activeLinkId,
+            hoverLinkId: hoverLinkId,
+            linkRevision: linkRevision,
+            wrapRef: wrapRef,
+            setTableEl: setTableEl,
+            computedLinks: computedLinks,
+            hoverTip: hoverTip,
+            dragging: dragging,
+            tempPath: tempPath,
+            startDrag: startDrag,
+            openLineageDialog: openLineageDialog,
+            resetBuilder: resetBuilder,
+            removeLink: removeLink,
+            onRowClick: onRowClick,
+            saveLineage: saveLineage,
         };
     },
 });
