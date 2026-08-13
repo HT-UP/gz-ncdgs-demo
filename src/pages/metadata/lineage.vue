@@ -1,5 +1,5 @@
 <template>
-  <div class="standard-page">
+  <div class="standard-page lineage-page">
     <div class="lineage-tabs-wrap">
       <el-tabs v-model="activeTab" type="border-card" stretch>
         <el-tab-pane label="血缘可视化" name="visual">
@@ -403,3 +403,141 @@ onBeforeUnmount(() => {
   lineageChart?.dispose()
 })
 </script>
+
+<style lang="scss" scoped>
+.lineage-page {
+  height: 100%;
+}
+
+.lineage-tabs-wrap {
+  height: 100%;
+  min-height: 540px;
+  display: flex;
+  flex-direction: column;
+
+  :deep(.el-tabs--border-card) {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-radius: 8px;
+  }
+
+  :deep(.el-tabs__content) {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  :deep(.el-tab-pane) {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
+.lineage-visual-pane,
+.lineage-detail-pane,
+.lineage-anomaly-pane {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.lineage-anomaly-pane {
+  overflow: auto;
+}
+
+.lineage-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.filter-select-sm {
+  width: 130px;
+}
+
+.lineage-detail-pane {
+  :deep(.el-table) {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+.lineage-chart {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+}
+
+.sankey-legend {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 6px 2px 0;
+}
+
+.sankey-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.sankey-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.anomaly-text {
+  color: #4a4a4a;
+  line-height: 1.6;
+}
+
+.anomaly-stats {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.anomaly-stat {
+  flex: 1;
+  min-width: 110px;
+  border: 1px solid #edf0f5;
+  border-radius: 8px;
+  padding: 14px;
+  text-align: center;
+  background: #fafafa;
+}
+
+.anomaly-stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.anomaly-stat-label {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.field-source {
+  color: #2b6cb0;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.field-target {
+  color: #da251d;
+  font-weight: 600;
+  font-size: 12px;
+}
+</style>

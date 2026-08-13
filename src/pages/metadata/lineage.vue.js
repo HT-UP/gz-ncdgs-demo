@@ -279,8 +279,12 @@ debugger; /* PartiallyEnd: #3632/scriptSetup.vue */
 const __VLS_ctx = {};
 let __VLS_components;
 let __VLS_directives;
+/** @type {__VLS_StyleScopedClasses['lineage-anomaly-pane']} */ ;
+/** @type {__VLS_StyleScopedClasses['lineage-detail-pane']} */ ;
+// CSS variable injection 
+// CSS variable injection end 
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
-    ...{ class: "standard-page" },
+    ...{ class: "standard-page lineage-page" },
 });
 __VLS_asFunctionalElement(__VLS_intrinsicElements.div, __VLS_intrinsicElements.div)({
     ...{ class: "lineage-tabs-wrap" },
@@ -663,6 +667,7 @@ for (const [stat] of __VLS_getVForSourceType((__VLS_ctx.anomalyStats))) {
 var __VLS_75;
 var __VLS_3;
 /** @type {__VLS_StyleScopedClasses['standard-page']} */ ;
+/** @type {__VLS_StyleScopedClasses['lineage-page']} */ ;
 /** @type {__VLS_StyleScopedClasses['lineage-tabs-wrap']} */ ;
 /** @type {__VLS_StyleScopedClasses['lineage-visual-pane']} */ ;
 /** @type {__VLS_StyleScopedClasses['lineage-toolbar']} */ ;
