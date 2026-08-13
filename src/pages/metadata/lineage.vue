@@ -300,7 +300,7 @@ const renderLineage = (highlight?: string) => {
     }),
   )
 
-  // 表级连线分组，一组字段映射渲染为多条微偏弧线
+  // 表级连线分组：同一对表的多条字段映射渲染为自边缘扇出的平行浅灰弧线
   const groupMap = new Map<string, FieldLink[]>()
   fieldLineage.forEach((link) => {
     const fromTable = link.source.split('.')[0]
@@ -311,10 +311,21 @@ const renderLineage = (highlight?: string) => {
   })
 
   const links: any[] = []
+  // 图表底部边界，用于判断每条连线所处的垂直位置
+  const bottomMax = Math.max(...layerOrder.flatMap((layer) => layerTables[layer].map((table) => ys[table] + cardHeightOf(table))))
   groupMap.forEach((mappers, key) => {
     const [fromTable, toTable] = key.split('>')
+    const fromCenterY = ys[fromTable] + cardHeightOf(fromTable) / 2
+    const toCenterY = ys[toTable] + cardHeightOf(toTable) / 2
+    const midY = (fromCenterY + toCenterY) / 2
+    // 0~1 垂直位置：0 顶部，1 底部
+    const t = bottomMax > 0 ? midY / bottomMax : 0.5
+    // 正曲率向上弯、负曲率向下弯：上方连线向上弯，下方连线向下弯，中部渐近平缓
+    const direction = 0.5 - t
     mappers.forEach((_m, i) => {
-      const curveness = 0.48 + i * 0.07
+      // 同组多条线沿相同弯曲方向微幅扇开
+      const spread = i * 0.03 * (direction >= 0 ? 1 : -1)
+      const curveness = direction * 0.7 + spread
       const matched =
         !!highlight &&
         (fromTable.includes(highlight) ||
@@ -326,7 +337,9 @@ const renderLineage = (highlight?: string) => {
         curveness,
         mappings: mappers,
         matched,
-        lineStyle: matched ? { color: '#DA251D', width: 3, curveness } : { color: '#B6BFCB', width: 1.6, curveness },
+        lineStyle: matched
+          ? { color: '#DA251D', width: 2.5, curveness, opacity: 1 }
+          : { color: '#C7CDD8', width: 0.9, curveness, opacity: 0.9 },
       })
     })
   })
@@ -356,8 +369,8 @@ const renderLineage = (highlight?: string) => {
         draggable: true,
         data: nodes,
         links,
-        lineStyle: { color: '#B6BFCB', width: 1.6, curveness: 0.5 },
-        emphasis: { focus: 'adjacency', lineStyle: { width: 3, color: '#DA251D' } },
+        lineStyle: { color: '#C7CDD8', width: 0.9, curveness: 0.3, opacity: 0.9 },
+        emphasis: { focus: 'adjacency', lineStyle: { width: 2.5, color: '#DA251D', opacity: 1 } },
       },
     ],
   })
