@@ -27,6 +27,11 @@
           <template #title>工作台</template>
         </el-menu-item>
 
+        <el-menu-item index="/cockpit">
+          <el-icon><DataAnalysis /></el-icon>
+          <template #title>数据治理驾驶舱</template>
+        </el-menu-item>
+
         <el-sub-menu index="/standard">
           <template #title>
             <el-icon><Files /></el-icon>
@@ -35,6 +40,10 @@
           <el-menu-item index="/standard/list">
             <el-icon><Tickets /></el-icon>
             <template #title>标准列表</template>
+          </el-menu-item>
+          <el-menu-item index="/standard/impact">
+            <el-icon><DataAnalysis /></el-icon>
+            <template #title>模型影响分析</template>
           </el-menu-item>
           <el-menu-item index="/standard/model-design">
             <el-icon><Grid /></el-icon>
@@ -106,6 +115,10 @@
             <el-icon><Download /></el-icon>
             <template #title>元数据采集</template>
           </el-menu-item>
+          <el-menu-item index="/metadata/schedule">
+            <el-icon><Clock /></el-icon>
+            <template #title>采集调度中心</template>
+          </el-menu-item>
           <el-menu-item index="/metadata/lineage">
             <el-icon><Share /></el-icon>
             <template #title>血缘解析</template>
@@ -140,6 +153,10 @@
           <el-menu-item index="/datadev/task">
             <el-icon><List /></el-icon>
             <template #title>任务管理</template>
+          </el-menu-item>
+          <el-menu-item index="/datadev/collect-config">
+            <el-icon><Calendar /></el-icon>
+            <template #title>采集任务配置</template>
           </el-menu-item>
           <el-menu-item index="/datadev/monitor">
             <el-icon><Monitor /></el-icon>
@@ -219,6 +236,10 @@
             <el-icon><Search /></el-icon>
             <template #title>探查任务管理</template>
           </el-menu-item>
+          <el-menu-item index="/resource/detail">
+            <el-icon><Tickets /></el-icon>
+            <template #title>资产详情</template>
+          </el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu index="/security">
@@ -245,6 +266,10 @@
           <el-menu-item index="/security/encryption">
             <el-icon><Lock /></el-icon>
             <template #title>加密与脱敏</template>
+          </el-menu-item>
+          <el-menu-item index="/security/masking">
+            <el-icon><View /></el-icon>
+            <template #title>脱敏规则配置</template>
           </el-menu-item>
           <el-menu-item index="/security/compliance">
             <el-icon><Checked /></el-icon>
@@ -277,6 +302,49 @@
             <el-icon><Cpu /></el-icon>
             <template #title>数据治理智能体</template>
           </el-menu-item>
+          <el-menu-item index="/intelligence/capability">
+            <el-icon><MagicStick /></el-icon>
+            <template #title>智能体能力卡片</template>
+          </el-menu-item>
+        </el-sub-menu>
+
+        <el-sub-menu index="/share">
+          <template #title>
+            <el-icon><Service /></el-icon>
+            <span>数据服务与共享</span>
+          </template>
+          <el-menu-item index="/share/register">
+            <el-icon><Edit /></el-icon>
+            <template #title>数据服务注册</template>
+          </el-menu-item>
+          <el-menu-item index="/share/publish">
+            <el-icon><Checked /></el-icon>
+            <template #title>服务发布审批</template>
+          </el-menu-item>
+          <el-menu-item index="/share/catalog">
+            <el-icon><Files /></el-icon>
+            <template #title>服务目录</template>
+          </el-menu-item>
+          <el-menu-item index="/share/auth">
+            <el-icon><Key /></el-icon>
+            <template #title>服务调用鉴权</template>
+          </el-menu-item>
+          <el-menu-item index="/share/monitor">
+            <el-icon><Monitor /></el-icon>
+            <template #title>服务监控看板</template>
+          </el-menu-item>
+          <el-menu-item index="/share/logs">
+            <el-icon><Document /></el-icon>
+            <template #title>调用日志</template>
+          </el-menu-item>
+          <el-menu-item index="/share/apply">
+            <el-icon><EditPen /></el-icon>
+            <template #title>共享申请与审批</template>
+          </el-menu-item>
+          <el-menu-item index="/share/ledger">
+            <el-icon><Notebook /></el-icon>
+            <template #title>共享台账</template>
+          </el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu index="/system">
@@ -299,6 +367,10 @@
           <el-menu-item index="/system/log">
             <el-icon><Document /></el-icon>
             <template #title>操作日志</template>
+          </el-menu-item>
+          <el-menu-item index="/system/baseline">
+            <el-icon><CircleCheck /></el-icon>
+            <template #title>安全基线核查</template>
           </el-menu-item>
         </el-sub-menu>
       </el-menu>
@@ -366,14 +438,16 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { Aim, Bell, Setting, Checked, Clock, Coin, Collection, Connection, Cpu, DataAnalysis, DataLine, Document, DocumentChecked, DocumentCopy, Download, Edit, Expand, Files, Fold, Folder, FolderOpened, Grid, Key, List, Lock, MagicStick, Monitor, Notebook, OfficeBuilding, PriceTag, Promotion, Search, SetUp, Share, Tickets, TrendCharts, Trophy, User, UserFilled, VideoCamera, View, WindPower } from '@element-plus/icons-vue'
+import { Aim, Bell, Calendar, Setting, Checked, CircleCheck, Clock, Coin, Collection, Connection, Cpu, DataAnalysis, DataLine, Document, DocumentChecked, DocumentCopy, Download, Edit, EditPen, Expand, Files, Fold, Folder, FolderOpened, Grid, Key, List, Lock, MagicStick, Monitor, Notebook, OfficeBuilding, PriceTag, Promotion, Search, Service, SetUp, Share, Tickets, TrendCharts, Trophy, User, UserFilled, VideoCamera, View, WindPower } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const collapsed = ref(false)
 
 const pageTitleMap: Record<string, { parent: string; current: string }> = {
   '/dashboard': { parent: '', current: '工作台' },
+  '/cockpit': { parent: '', current: '数据治理驾驶舱' },
   '/standard/list': { parent: '数据标准管理', current: '标准列表' },
+  '/standard/impact': { parent: '数据标准管理', current: '模型影响分析' },
   '/standard/model-design': { parent: '数据标准管理', current: '模型设计' },
   '/standard/quality-standard': { parent: '数据标准管理', current: '数据质量标准' },
   '/standard/implementation': { parent: '数据标准管理', current: '标准实施监控' },
@@ -389,6 +463,7 @@ const pageTitleMap: Record<string, { parent: string; current: string }> = {
   '/datadev/realtime': { parent: '数据开发集成', current: '实时处理' },
   '/datadev/stream': { parent: '数据开发集成', current: '流式数据处理' },
   '/datadev/task': { parent: '数据开发集成', current: '任务管理' },
+  '/datadev/collect-config': { parent: '数据开发集成', current: '采集任务配置' },
   '/datadev/monitor': { parent: '数据开发集成', current: '任务监控' },
   '/datadev/flow': { parent: '数据开发集成', current: '流程化配置' },
   '/datadev/security': { parent: '数据开发集成', current: '安全与合规' },
@@ -405,25 +480,38 @@ const pageTitleMap: Record<string, { parent: string; current: string }> = {
   '/resource/lineage': { parent: '数据资源管理', current: '血缘分析' },
   '/resource/feature': { parent: '数据资源管理', current: '特征自动识别' },
   '/resource/explore': { parent: '数据资源管理', current: '探查任务管理' },
+  '/resource/detail': { parent: '数据资源管理', current: '资产详情' },
   '/security/overview': { parent: '数据安全与合规', current: '安全总览' },
   '/security/tenant': { parent: '数据安全与合规', current: '多租户管理' },
   '/security/access-control': { parent: '数据安全与合规', current: '访问控制' },
   '/security/audit': { parent: '数据安全与合规', current: '安全审计' },
   '/security/encryption': { parent: '数据安全与合规', current: '加密与脱敏' },
+  '/security/masking': { parent: '数据安全与合规', current: '脱敏规则配置' },
   '/security/compliance': { parent: '数据安全与合规', current: '合规治理' },
   '/intelligence/overview': { parent: '智能治理能力', current: '智能总览' },
   '/intelligence/metadata-ai': { parent: '智能治理能力', current: '元数据智能补全' },
   '/intelligence/classify': { parent: '智能治理能力', current: '智能分类分级' },
   '/intelligence/knowledge': { parent: '智能治理能力', current: '知识库管理' },
   '/intelligence/agent': { parent: '智能治理能力', current: '数据治理智能体' },
+  '/intelligence/capability': { parent: '智能治理能力', current: '智能体能力卡片' },
   '/system/user': { parent: '系统管理', current: '用户管理' },
   '/system/role': { parent: '系统管理', current: '角色权限' },
   '/system/monitor': { parent: '系统管理', current: '运维监控' },
   '/system/log': { parent: '系统管理', current: '操作日志' },
+  '/system/baseline': { parent: '系统管理', current: '安全基线核查' },
+  '/share/register': { parent: '数据服务与共享', current: '数据服务注册' },
+  '/share/publish': { parent: '数据服务与共享', current: '服务发布审批' },
+  '/share/catalog': { parent: '数据服务与共享', current: '服务目录' },
+  '/share/auth': { parent: '数据服务与共享', current: '服务调用鉴权' },
+  '/share/monitor': { parent: '数据服务与共享', current: '服务监控看板' },
+  '/share/logs': { parent: '数据服务与共享', current: '调用日志' },
+  '/share/apply': { parent: '数据服务与共享', current: '共享申请与审批' },
+  '/share/ledger': { parent: '数据服务与共享', current: '共享台账' },
   '/metadata/overview': { parent: '元数据管理', current: '元数据总览' },
   '/metadata/model': { parent: '元数据管理', current: '元模型管理' },
   '/metadata/data-element': { parent: '元数据管理', current: '数据元管理' },
   '/metadata/collection': { parent: '元数据管理', current: '元数据采集' },
+  '/metadata/schedule': { parent: '元数据管理', current: '采集调度中心' },
   '/metadata/lineage': { parent: '元数据管理', current: '血缘解析' },
   '/metadata/tag': { parent: '元数据管理', current: '数据标签管理' },
 }

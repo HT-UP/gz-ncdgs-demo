@@ -8,6 +8,11 @@ export const routes = [
         children: [
             { path: 'dashboard', name: 'dashboard', component: Workbench },
             {
+                path: 'cockpit',
+                name: 'GovernanceCockpit',
+                component: () => import('@/pages/dashboard/cockpit.vue'),
+            },
+            {
                 path: 'standard',
                 name: 'Standard',
                 redirect: '/standard/list',
@@ -16,6 +21,11 @@ export const routes = [
                         path: 'list',
                         name: 'StandardList',
                         component: () => import('@/pages/standard/list.vue'),
+                    },
+                    {
+                        path: 'impact',
+                        name: 'ImpactAnalysis',
+                        component: () => import('@/pages/standard/impact.vue'),
                     },
                     {
                         path: 'model-design',
@@ -102,6 +112,11 @@ export const routes = [
                         component: () => import('@/pages/metadata/collection.vue'),
                     },
                     {
+                        path: 'schedule',
+                        name: 'MetaSchedule',
+                        component: () => import('@/pages/metadata/schedule.vue'),
+                    },
+                    {
                         path: 'lineage',
                         name: 'LineageAnalysis',
                         component: () => import('@/pages/metadata/lineage.vue'),
@@ -142,6 +157,11 @@ export const routes = [
                         path: 'task',
                         name: 'TaskManage',
                         component: () => import('@/pages/datadev/task.vue'),
+                    },
+                    {
+                        path: 'collect-config',
+                        name: 'CollectConfig',
+                        component: () => import('@/pages/datadev/collect-config.vue'),
                     },
                     {
                         path: 'monitor',
@@ -237,6 +257,11 @@ export const routes = [
                         name: 'ExploreTask',
                         component: () => import('@/pages/resource/explore.vue'),
                     },
+                    {
+                        path: 'detail',
+                        name: 'AssetDetail',
+                        component: () => import('@/pages/resource/detail.vue'),
+                    },
                 ],
             },
             {
@@ -268,6 +293,11 @@ export const routes = [
                         path: 'encryption',
                         name: 'EncryptionMasking',
                         component: () => import('@/pages/security/encryption.vue'),
+                    },
+                    {
+                        path: 'masking',
+                        name: 'MaskingRuleConfig',
+                        component: () => import('@/pages/security/masking.vue'),
                     },
                     {
                         path: 'compliance',
@@ -306,6 +336,11 @@ export const routes = [
                         name: 'DataGovernAgent',
                         component: () => import('@/pages/intelligence/agent.vue'),
                     },
+                    {
+                        path: 'capability',
+                        name: 'AgentCapability',
+                        component: () => import('@/pages/intelligence/capability.vue'),
+                    },
                 ],
             },
             {
@@ -333,7 +368,63 @@ export const routes = [
                         name: 'OperationLog',
                         component: () => import('@/pages/system/log.vue'),
                     },
+                    {
+                        path: 'baseline',
+                        name: 'SecurityBaseline',
+                        component: () => import('@/pages/system/baseline.vue'),
+                    },
                 ],
+            },
+            {
+                path: 'share',
+                name: 'DataShare',
+                redirect: '/share/catalog',
+                children: [
+                    {
+                        path: 'register',
+                        name: 'ServiceRegister',
+                        component: () => import('@/pages/share/register.vue'),
+                    },
+                    {
+                        path: 'publish',
+                        name: 'ServicePublish',
+                        component: () => import('@/pages/share/publish.vue'),
+                    },
+                    {
+                        path: 'catalog',
+                        name: 'ServiceCatalog',
+                        component: () => import('@/pages/share/catalog.vue'),
+                    },
+                    {
+                        path: 'auth',
+                        name: 'ServiceAuth',
+                        component: () => import('@/pages/share/auth.vue'),
+                    },
+                    {
+                        path: 'monitor',
+                        name: 'ServiceMonitor',
+                        component: () => import('@/pages/share/monitor.vue'),
+                    },
+                    {
+                        path: 'logs',
+                        name: 'ServiceLogs',
+                        component: () => import('@/pages/share/logs.vue'),
+                    },
+                    {
+                        path: 'apply',
+                        name: 'ShareApply',
+                        component: () => import('@/pages/share/apply.vue'),
+                    },
+                    {
+                        path: 'ledger',
+                        name: 'ShareLedger',
+                        component: () => import('@/pages/share/ledger.vue'),
+                    },
+                ],
+            },
+            {
+                path: '/:pathMatch(.*)*',
+                redirect: '/dashboard',
             },
         ],
     },

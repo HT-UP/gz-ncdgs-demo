@@ -12,6 +12,12 @@
       </el-col>
     </el-row>
 
+    <el-alert type="success" :closable="false" class="grade-rule-alert">
+      <template #title>
+        <span class="dep-text">等级评定规则：</span>A 级（综合评分 ≥ 90，且无重大缺陷）· B 级（≥ 80）· C 级（≥ 70）· D 级（&lt; 70）；评级周期一年，逾期未续训自动降级。
+      </template>
+    </el-alert>
+
     <el-card class="panel-card dashboard-card mt-16" shadow="never">
       <template #header>
         <div class="panel-header">
@@ -110,6 +116,13 @@
             质量等级
             <span class="grade-badge-grade" :style="{ background: gradeColor[certGrade], color: '#fff' }">{{ certGrade }}</span>
           </div>
+          <div class="cert-dims">
+            <div v-for="d in certDims" :key="d.name" class="cert-dim">
+              <span class="cert-dim-name">{{ d.name }}</span>
+              <el-progress :percentage="d.value" :stroke-width="8" :color="d.value >= 90 ? '#00A854' : d.value >= 80 ? '#2B6CB0' : '#E34D59'" class="cert-dim-bar" />
+              <span class="cert-dim-value">{{ d.value }}</span>
+            </div>
+          </div>
           <div class="cert-validity">有效期至 {{ certExpire }}</div>
         </div>
         <div class="cert-footer">广州地铁新线建设数据治理中心 颁发</div>
@@ -160,6 +173,14 @@ const certExpire = ref('')
 
 const certs = ref([...mockCertifications])
 
+const certDims = [
+  { name: '完整性', value: 96 },
+  { name: '准确性', value: 94 },
+  { name: '一致性', value: 92 },
+  { name: '及时性', value: 89 },
+  { name: '可用性', value: 95 },
+]
+
 const applyForm = reactive({
   assetName: '票务核心库',
   assetType: '数据源',
@@ -207,3 +228,39 @@ const showHistory = (row: CertificationRecord) => {
   ElMessage.info(`「${row.assetName}」认证历史：2024 B级 → 2025 A级 → 2026 ${row.grade}级（Mock）`)
 }
 </script>
+
+<style lang="scss" scoped>
+.grade-rule-alert {
+  margin-top: 16px;
+}
+
+.cert-dims {
+  margin: 8px 0;
+}
+
+.cert-dim {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.cert-dim-name {
+  width: 52px;
+  flex: none;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.cert-dim-bar {
+  flex: 1;
+}
+
+.cert-dim-value {
+  width: 30px;
+  text-align: right;
+  color: #4a4a4a;
+  font-size: 12px;
+  font-weight: 600;
+}
+</style>
