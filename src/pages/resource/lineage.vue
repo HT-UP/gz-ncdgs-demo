@@ -1,242 +1,1080 @@
 <template>
-  <div class="standard-page">
-    <el-row :gutter="16">
-      <el-col :span="16">
-        <el-card class="panel-card dashboard-card" shadow="never">
-          <template #header>
-            <div class="panel-header">
-              <span>血缘关系图</span>
-              <div class="panel-actions">
-                <el-radio-group v-model="viewMode" size="small">
-                  <el-radio-button label="正向影响">正向影响</el-radio-button>
-                  <el-radio-button label="反向溯源">反向溯源</el-radio-button>
-                  <el-radio-button label="全部关系">全部关系</el-radio-button>
-                </el-radio-group>
-                <el-button type="danger" size="small" :icon="Download" @click="exportLineage">导出血缘</el-button>
+  <div class="standard-page lineage-page">
+    <div class="lineage-tabs-wrap">
+      <el-tabs v-model="activeTab" type="border-card" stretch>
+        <el-tab-pane label="血缘可视化" name="visual">
+          <div class="lineage-visual-pane">
+            <div class="lineage-toolbar">
+              <el-input
+                v-model="searchTable"
+                placeholder="搜索表名 / 字段名"
+                clearable
+                size="small"
+                class="search-input-sm"
+                @keyup.enter="highlightTable"
+              />
+              <el-button type="danger" size="small" @click="highlightTable">定位</el-button>
+              <el-button size="small" :icon="Connection" @click="openLineageDialog">血缘填报</el-button>
+            </div>
+            <div ref="lineageChartRef" class="lineage-chart"></div>
+            <div class="sankey-legend">
+              <span v-for="item in legendItems" :key="item.label" class="sankey-legend-item">
+                <i class="sankey-legend-dot" :style="{ background: item.color }"></i>{{ item.label }}
+              </span>
+            </div>
+          </div>
+        </el-tab-pane>
+
+        <el-tab-pane label="血缘明细" name="detail">
+          <div class="lineage-detail-pane">
+            <div class="lineage-toolbar">
+              <el-select v-model="detailFilter" size="small" class="filter-select-sm">
+                <el-option label="全部目标表" value="" />
+                <el-option v-for="t in targetTables" :key="t" :label="t" :value="t" />
+              </el-select>
+              <span class="dep-text">共 {{ filteredDetails.length }} 条字段级血缘记录</span>
+            </div>
+            <el-table :data="filteredDetails" size="small" stripe height="100%">
+              <el-table-column label="源字段" min-width="170">
+                <template #default="{ row }">
+                  <span class="field-source">{{ row.source }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="处理函数" width="140">
+                <template #default="{ row }">
+                  <el-tag size="small" type="warning" effect="plain">{{ row.func }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="目标字段" min-width="170">
+                <template #default="{ row }">
+                  <span class="field-target">{{ row.target }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="数据量" width="100" align="right">
+                <template #default="{ row }">{{ row.flowText }}</template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-tab-pane>
+
+        <el-tab-pane label="异常血缘追踪" name="anomaly">
+          <div class="lineage-anomaly-pane">
+            <el-alert title="系统自动巡检血缘链路，标记断裂、循环、孤立、口径冲突与函数告警，供人工复核处理（Mock）" type="warning" :closable="false" show-icon class="mb-12" />
+            <div class="anomaly-list">
+              <div v-for="item in anomalies" :key="item.text" class="anomaly-item">
+                <el-tag effect="dark" :type="item.level" size="small">{{ item.type }}</el-tag>
+                <span class="anomaly-text">{{ item.text }}</span>
               </div>
             </div>
-          </template>
-          <div ref="lineageChartRef" class="lineage-chart"></div>
-          <div class="lineage-legend">
-            <span><i class="legend-dot" style="background: #DA251D"></i>当前表</span>
-            <span><i class="legend-dot" style="background: #2B6CB0"></i>上游来源</span>
-            <span><i class="legend-dot" style="background: #00A854"></i>下游依赖</span>
-            <span><i class="legend-dot" style="background: #ED7B2F"></i>异常节点</span>
-          </div>
-        </el-card>
-      </el-col>
-
-      <el-col :span="8">
-        <el-card class="panel-card dashboard-card" shadow="never">
-          <template #header>
-            <div class="panel-header"><span>血缘分析</span></div>
-          </template>
-          <el-select v-model="selectedTable" filterable class="w-full" @change="renderLineage">
-            <el-option v-for="table in tablePool" :key="table" :label="table" :value="table" />
-          </el-select>
-
-          <div class="lineage-stats mt-16">
-            <div class="stat-row"><span>上游来源</span><b class="stat-blue">{{ upstreamCount }}</b></div>
-            <div class="stat-row"><span>下游依赖</span><b class="stat-green">{{ downstreamCount }}</b></div>
-            <div class="stat-row"><span>血缘层级</span><b>{{ depth }}</b></div>
-            <div class="stat-row"><span>影响范围</span><b>{{ upstreamCount + downstreamCount }} 张表</b></div>
-          </div>
-
-          <el-divider />
-
-          <div class="section-title">变更影响评估</div>
-          <div class="impact-item">
-            <div class="impact-icon"><el-icon :size="16"><Share /></el-icon></div>
-            <div class="impact-info">
-              <div class="impact-name">结构变更影响面</div>
-              <div class="impact-desc">涉及 3 个下游任务、2 个报表依赖，预计影响等级 <b style="color:#ED7B2F">中</b></div>
+            <div class="anomaly-stats">
+              <div v-for="stat in anomalyStats" :key="stat.label" class="anomaly-stat">
+                <div class="anomaly-stat-value" :style="{ color: stat.color }">{{ stat.value }}</div>
+                <div class="anomaly-stat-label">{{ stat.label }}</div>
+              </div>
             </div>
           </div>
+        </el-tab-pane>
+      </el-tabs>
+    </div>
 
-          <el-divider />
+    <el-dialog
+      v-model="lineageDialogVisible"
+      title="血缘填报 · 拖拽连线"
+      fullscreen
+      class="lineage-report-dialog"
+      destroy-on-close
+    >
+      <el-alert class="report-hint" type="info" :closable="false" show-icon>
+        <template #title>
+          从左侧<span class="hint-strong">上游源表</span>的行或端口按住拖拽，连线到右侧<span class="hint-strong">下游目标表</span>的行，
+          松手即建立一条血缘连线；连线在下表可调整处理函数，保存后血缘图实时更新。
+        </template>
+      </el-alert>
 
-          <div class="section-title">异常血缘检测</div>
-          <div class="anomaly-list">
-            <div v-for="item in anomalies" :key="item.name" class="anomaly-item">
-              <el-tag size="small" :type="item.type === '环状依赖' ? 'danger' : 'warning'" effect="dark">{{ item.type }}</el-tag>
-              <span class="anomaly-name">{{ item.name }}</span>
-              <span class="dep-text">{{ item.note }}</span>
+      <div class="report-builder">
+        <div id="report-canvas" ref="wrapRef" class="report-canvas-wrap">
+          <svg class="report-svg">
+            <path
+              v-for="lnk in computedLinks"
+              :key="lnk.id"
+              :d="lnk.path"
+              :class="{ 'is-active': activeLinkId === lnk.id || hoverLinkId === lnk.id }"
+              @mouseenter="hoverLinkId = lnk.id"
+              @mouseleave="hoverLinkId = null"
+            />
+            <path v-if="dragging" :d="tempPath" class="report-temp-path" />
+          </svg>
+          <div v-if="hoverTip" class="report-hover-tip" :style="{ left: hoverTip.x + 'px', top: hoverTip.y + 'px' }">
+            {{ hoverTip.text }}
+          </div>
+
+          <aside class="report-side report-side-left" @scroll="linkRevision++">
+            <div class="side-title">上游源表（数据库）</div>
+            <div v-for="db in upDbs" :key="db.name" class="db-section">
+              <div class="db-head">{{ db.name }}</div>
+              <div
+                v-for="t in db.tables"
+                :key="t"
+                class="table-row"
+                :ref="setTableEl(`up:${db.name}:${t}`)"
+                @pointerdown="startDrag($event, 'up', db.name, t)"
+              >
+                <span class="table-name">{{ t }}</span>
+                <span class="port port-right" title="拖拽到右侧建立血缘" />
+              </div>
             </div>
-          </div>
+          </aside>
 
-          <div class="section-title mt-16">血缘维护</div>
-          <div class="maintain-actions">
-            <el-button size="small" @click="autoDiscover">自动发现</el-button>
-            <el-button size="small" type="primary" @click="manualLink">手动维护</el-button>
-            <el-button size="small" type="danger" plain @click="removeNode">删除节点</el-button>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+          <aside class="report-side report-side-right" @scroll="linkRevision++">
+            <div class="side-title">下游目标表（数据库）</div>
+            <div v-for="db in downDbs" :key="db.name" class="db-section">
+              <div class="db-head">{{ db.name }}</div>
+              <div
+                v-for="t in db.tables"
+                :key="t"
+                class="table-row"
+                :ref="setTableEl(`down:${db.name}:${t}`)"
+                @pointerdown="startDrag($event, 'down', db.name, t)"
+              >
+                <span class="port port-left" title="拖拽到左侧建立血缘" />
+                <span class="table-name">{{ t }}</span>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <div class="report-links">
+          <el-table :data="reportLinks" size="small" height="150" highlight-current-row @row-click="onRowClick">
+            <el-table-column label="上游（数据库 · 表）" min-width="180">
+              <template #default="{ row }">
+                <span class="field-source">{{ row.upDb }} · {{ row.upTable }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="处理函数" width="180">
+              <template #default="{ row }">
+                <el-select v-model="row.func" size="small" filterable allow-create default-first-option>
+                  <el-option v-for="f in funcOptions" :key="f" :label="f" :value="f" />
+                </el-select>
+              </template>
+            </el-table-column>
+            <el-table-column label="下游（数据库 · 表）" min-width="180">
+              <template #default="{ row }">
+                <span class="field-target">{{ row.downDb }} · {{ row.downTable }}</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="80" align="center">
+              <template #default="{ row }">
+                <el-button type="danger" link :icon="Delete" @click.stop="removeLink(row.id)" />
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="report-footer">
+          <span class="report-count">已填报 {{ reportLinks.length }} 条血缘连线</span>
+          <el-button size="small" @click="resetBuilder">重置</el-button>
+          <el-button size="small" @click="lineageDialogVisible = false">取消</el-button>
+          <el-button type="danger" size="small" @click="saveLineage">保存</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Download, Share } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
+import { Connection, Delete } from '@element-plus/icons-vue'
 
-const tablePool = ['ticket_sale_detail', 'passenger_info', 'flow_stat_daily', 'device_status_log', 'station_info', 'train_operation_log', 'line_info']
-
-const relations: [string, string][] = [
-  ['passenger_info', 'ticket_sale_detail'],
-  ['station_info', 'flow_stat_daily'],
-  ['device_status_log', 'flow_stat_daily'],
-  ['ticket_sale_detail', 'flow_stat_daily'],
-  ['ticket_sale_detail', 'train_operation_log'],
-  ['flow_stat_daily', 'train_operation_log'],
-  ['line_info', 'station_info'],
-  ['line_info', 'train_operation_log'],
-  ['device_status_log', 'train_operation_log'],
-]
-
-const viewMode = ref('正向影响')
-const selectedTable = ref('ticket_sale_detail')
-const lineageChartRef = ref<HTMLElement>()
-let chart: echarts.ECharts | null = null
-
-const anomalies = [
-  { type: '环状依赖', name: 'flow_stat_daily ⇄ train_operation_log', note: '存在循环引用' },
-  { type: '孤立节点', name: 'station_info', note: '无上游血缘', extra: true },
-]
-
-const upstreamCount = computed(
-  () => relations.filter(([from, to]) => to === selectedTable.value).length,
-)
-const downstreamCount = computed(
-  () => relations.filter(([from, to]) => from === selectedTable.value).length,
-)
-const depth = computed(() => 3)
-
-interface NodeData {
-  name: string
-  category: 0 | 1 | 2 | 3
-  symbolSize: number
-}
-
-interface LinkData {
+type FieldLink = {
   source: string
   target: string
-  lineStyle?: { color: string; width?: number; type?: string }
+  func: string
+  flow: number
 }
 
-const renderLineage = () => {
+type Layer = 'source' | 'mid' | 'target'
+
+const fieldLineage: FieldLink[] = [
+  { source: 'passenger_info.passenger_id', target: 'ticket_sale_detail.passenger_id', func: '直接映射', flow: 8620 },
+  { source: 'station_info.station_code', target: 'flow_stat_daily.station_code', func: 'JOIN 映射', flow: 128 },
+  { source: 'station_info.station_name', target: 'flow_stat_daily.station_name', func: 'JOIN 映射', flow: 128 },
+  { source: 'device_status_log.device_id', target: 'flow_stat_daily.device_cnt', func: 'COUNT(DISTINCT device_id)', flow: 512 },
+  { source: 'ticket_sale_detail.ticket_no', target: 'flow_stat_daily.passenger_cnt', func: 'COUNT(ticket_no)', flow: 8620 },
+  { source: 'ticket_sale_detail.ticket_date', target: 'flow_stat_daily.stat_date', func: 'TO_DATE(ticket_date)', flow: 8620 },
+  { source: 'line_info.line_code', target: 'station_info.line_code', func: 'JOIN 映射', flow: 8 },
+  { source: 'line_info.line_code', target: 'train_operation_log.line_code', func: 'JOIN 映射', flow: 8 },
+  { source: 'ticket_sale_detail.amount', target: 'train_operation_log.ticket_cnt', func: 'SUM(amount)', flow: 8620 },
+  { source: 'flow_stat_daily.passenger_cnt', target: 'train_operation_log.passenger_cnt', func: 'SUM(passenger_cnt)', flow: 8620 },
+  { source: 'flow_stat_daily.stat_date', target: 'train_operation_log.op_date', func: 'TO_DATE(stat_date)', flow: 8620 },
+  { source: 'device_status_log.device_id', target: 'train_operation_log.device_id', func: '直接映射', flow: 512 },
+  { source: 'device_status_log.status', target: 'train_operation_log.device_status', func: '直接映射', flow: 512 },
+]
+
+const tableMeta: Record<string, { label: string; layer: Layer }> = {
+  passenger_info: { label: '乘客信息表', layer: 'source' },
+  station_info: { label: '车站信息表', layer: 'source' },
+  line_info: { label: '线路信息表', layer: 'source' },
+  device_status_log: { label: '设备状态日志表', layer: 'source' },
+  ticket_sale_detail: { label: '售票明细表', layer: 'mid' },
+  flow_stat_daily: { label: '客流日统计表', layer: 'mid' },
+  train_operation_log: { label: '列车运行日志报表', layer: 'target' },
+}
+
+const tableFields: Record<string, string[]> = {
+  passenger_info: ['passenger_id', 'passenger_name', 'age', 'phone', 'create_time'],
+  station_info: ['station_code', 'station_name', 'station_type', 'line_code', 'status'],
+  line_info: ['line_code', 'line_name', 'status'],
+  device_status_log: ['device_id', 'device_name', 'status', 'report_time', 'create_time'],
+  ticket_sale_detail: ['ticket_no', 'passenger_id', 'ticket_date', 'line_code', 'amount', 'create_time'],
+  flow_stat_daily: ['stat_date', 'station_code', 'station_name', 'line_code', 'device_cnt', 'passenger_cnt', 'update_time'],
+  train_operation_log: ['operation_id', 'line_code', 'station_code', 'device_id', 'device_status', 'passenger_cnt', 'ticket_cnt', 'op_date', 'create_time'],
+}
+
+const pkFields = new Set([
+  'passenger_info.passenger_id',
+  'station_info.station_code',
+  'line_info.line_code',
+  'device_status_log.device_id',
+  'ticket_sale_detail.ticket_no',
+  'flow_stat_daily.stat_date',
+  'train_operation_log.operation_id',
+])
+
+const layerTables: Record<Layer, string[]> = {
+  source: ['passenger_info', 'station_info', 'line_info', 'device_status_log'],
+  mid: ['ticket_sale_detail', 'flow_stat_daily'],
+  target: ['train_operation_log'],
+}
+
+const layerColor: Record<Layer, string> = {
+  source: '#2B6CB0',
+  mid: '#00A854',
+  target: '#DA251D',
+}
+
+const layerName: Record<Layer, string> = {
+  source: '源系统表',
+  mid: '中间层表',
+  target: '汇总报表层',
+}
+
+const legendItems = [
+  { label: '源系统表', color: '#2B6CB0' },
+  { label: '中间层表（ODS/DWD/DIM）', color: '#00A854' },
+  { label: '汇总报表层', color: '#DA251D' },
+]
+
+const anomalies = [
+  { type: '断裂', level: 'danger', text: 'passenger_info.phone 无下游字段，缺少脱敏规则（Mock）' },
+  { type: '循环', level: 'warning', text: 'flow_stat_daily.passenger_cnt ↔ train_operation_log.passenger_cnt 疑似循环引用，已自动阻断（Mock）' },
+  { type: '孤立', level: 'danger', text: 'station_info.station_type 无上游且无下游，未纳入解析（Mock）' },
+  { type: '冲突', level: 'warning', text: 'train_operation_log.ticket_cnt 存在多口径上游，请确认统计口径（Mock）' },
+  { type: '告警', level: 'info', text: 'ticket_sale_detail.ticket_date 使用隐式转换，建议显式 CAST（Mock）' },
+]
+
+const anomalyStats = [
+  { label: '断裂', value: 1, color: '#DA251D' },
+  { label: '循环', value: 1, color: '#ED7B2F' },
+  { label: '孤立', value: 1, color: '#DA251D' },
+  { label: '冲突', value: 1, color: '#ED7B2F' },
+  { label: '告警', value: 1, color: '#2B6CB0' },
+]
+
+const formatFlow = (value: number) => (value >= 10000 ? `${(value / 10000).toFixed(1)} 万` : `${value}`)
+
+const lineageChartRef = ref<HTMLElement>()
+const searchTable = ref('')
+const detailFilter = ref('')
+const activeTab = ref('visual')
+let lineageChart: echarts.ECharts | null = null
+
+const targetTables = computed(() => [...new Set(fieldLineage.map((link) => link.target.split('.')[0]))])
+
+const filteredDetails = computed(() =>
+  detailFilter.value
+    ? fieldLineage.map((link) => ({ ...link, flowText: formatFlow(link.flow) })).filter((link) => link.target.startsWith(`${detailFilter.value}.`))
+    : fieldLineage.map((link) => ({ ...link, flowText: formatFlow(link.flow) })),
+)
+
+const cardWidthOf = (table: string) => {
+  const maxLen = Math.max(...tableFields[table].map((f) => f.length + (pkFields.has(`${table}.${f}`) ? 4 : 0)))
+  return Math.max(160, Math.min(260, maxLen * 7.5 + 34))
+}
+
+const cardHeightOf = (table: string) => tableFields[table].length * 20 + 48
+
+const renderLineage = (highlight?: string) => {
   if (!lineageChartRef.value) return
-  chart?.dispose()
-  chart = echarts.init(lineageChartRef.value)
+  lineageChart?.dispose()
+  lineageChart = echarts.init(lineageChartRef.value)
 
-  const current = selectedTable.value
-  const upStreams = relations.filter(([, to]) => to === current).map(([from]) => from)
-  const downStreams = relations.filter(([from]) => from === current).map(([, to]) => to)
+  // 横向分层布局：源系统表 → 中间层 → 汇总报表
+  const colMaxWidth: Record<Layer, number> = { source: 0, mid: 0, target: 0 }
+  ;(Object.keys(layerTables) as Layer[]).forEach((layer) => {
+    colMaxWidth[layer] = Math.max(...layerTables[layer].map(cardWidthOf))
+  })
+  const xs: Record<Layer, number> = { source: 20, mid: 0, target: 0 }
+  const layerOrder: Layer[] = ['source', 'mid', 'target']
+  layerOrder.forEach((layer, i) => {
+    if (i > 0) xs[layer] = xs[layerOrder[i - 1]] + colMaxWidth[layerOrder[i - 1]] + 200
+  })
 
-  const nodes: NodeData[] = []
-  const links: LinkData[] = []
-  const nodeSet = new Set<string>()
-
-  const addNode = (name: string, category: NodeData['category']) => {
-    if (nodeSet.has(name)) return
-    nodeSet.add(name)
-    nodes.push({ name, category, symbolSize: name === current ? 54 : 38 })
-  }
-
-  const addLink = (source: string, target: string, category: 0 | 1 | 2) => {
-    links.push({
-      source,
-      target,
-      lineStyle: { color: category === 1 ? '#2B6CB0' : category === 2 ? '#00A854' : '#C0C4CC', width: category === 0 ? 3 : 2 },
+  const ys: Record<string, number> = {}
+  layerOrder.forEach((layer) => {
+    let y = 20
+    layerTables[layer].forEach((table) => {
+      ys[table] = y
+      y += cardHeightOf(table) + 46
     })
-  }
+  })
 
-  addNode(current, 0)
+  const nodes = layerOrder.flatMap((layer) =>
+    layerTables[layer].map((table) => {
+      const meta = tableMeta[table]
+      const color = layerColor[meta.layer]
+      const width = cardWidthOf(table)
+      const matched = !!highlight && (table.includes(highlight) || tableFields[table].some((f) => f.includes(highlight)))
+      return {
+        name: table,
+        x: xs[layer],
+        y: ys[table],
+        symbol: 'rect',
+        symbolSize: [width, cardHeightOf(table)],
+        tipHtml: `<b>${table}</b><br/>${meta.label}｜${layerName[meta.layer]}<br/>字段数：${tableFields[table].length}`,
+        itemStyle: matched
+          ? { color: '#fff', borderColor: '#DA251D', borderWidth: 2.5, borderRadius: 6, shadowBlur: 12, shadowColor: 'rgba(218,37,29,0.4)' }
+          : { color: '#fff', borderColor: '#D3D8E0', borderWidth: 1.5, borderRadius: 6 },
+        label: {
+          show: true,
+          position: 'inside',
+          formatter: () =>
+            `{title|${table}}\n{fields|${tableFields[table]
+              .map((f) => (pkFields.has(`${table}.${f}`) ? `PK · ${f}` : f))
+              .join('\n')}}`,
+          rich: {
+            title: {
+              width: width - 8,
+              height: 30,
+              backgroundColor: color,
+              color: '#fff',
+              fontSize: 13,
+              fontWeight: 700,
+              lineHeight: 30,
+              padding: [0, 10, 0, 10],
+              align: 'left',
+              verticalAlign: 'middle',
+              borderRadius: [6, 6, 0, 0],
+            },
+            fields: {
+              width: width - 8,
+              color: '#4A4A4A',
+              backgroundColor: '#FFFFFF',
+              fontSize: 12,
+              lineHeight: 20,
+              padding: [6, 10, 12, 10],
+              align: 'left',
+              verticalAlign: 'top',
+              borderRadius: [0, 0, 6, 6],
+            },
+          },
+        },
+      }
+    }),
+  )
 
-  if (viewMode.value === '反向溯源' || viewMode.value === '全部关系') {
-    upStreams.forEach((name) => {
-      addNode(name, 1)
-      addLink(name, current, 1)
+  // 表级连线分组：同一对表的多条字段映射渲染为自边缘扇出的平行浅灰弧线
+  const groupMap = new Map<string, FieldLink[]>()
+  fieldLineage.forEach((link) => {
+    const fromTable = link.source.split('.')[0]
+    const toTable = link.target.split('.')[0]
+    const key = `${fromTable}>${toTable}`
+    if (!groupMap.has(key)) groupMap.set(key, [])
+    groupMap.get(key)!.push(link)
+  })
+
+  const links: any[] = []
+  // 图表底部边界，用于判断每条连线所处的垂直位置
+  const bottomMax = Math.max(...layerOrder.flatMap((layer) => layerTables[layer].map((table) => ys[table] + cardHeightOf(table))))
+  groupMap.forEach((mappers, key) => {
+    const [fromTable, toTable] = key.split('>')
+    const fromCenterY = ys[fromTable] + cardHeightOf(fromTable) / 2
+    const toCenterY = ys[toTable] + cardHeightOf(toTable) / 2
+    const midY = (fromCenterY + toCenterY) / 2
+    // 0~1 垂直位置：0 顶部，1 底部
+    const t = bottomMax > 0 ? midY / bottomMax : 0.5
+    // 正曲率向上弯、负曲率向下弯：上方连线向上弯，下方连线向下弯，中部渐近平缓
+    const direction = 0.5 - t
+    mappers.forEach((_m, i) => {
+      // 同组多条线沿相同弯曲方向微幅扇开
+      const spread = i * 0.03 * (direction >= 0 ? 1 : -1)
+      const curveness = direction * 0.7 + spread
+      const matched =
+        !!highlight &&
+        (fromTable.includes(highlight) ||
+          toTable.includes(highlight) ||
+          mappers.some((x) => x.source.includes(highlight) || x.target.includes(highlight)))
+      links.push({
+        source: fromTable,
+        target: toTable,
+        curveness,
+        mappings: mappers,
+        matched,
+        lineStyle: matched
+          ? { color: '#DA251D', width: 2.5, curveness, opacity: 1 }
+          : { color: '#C7CDD8', width: 0.9, curveness, opacity: 0.9 },
+      })
     })
-  }
-  if (viewMode.value === '正向影响' || viewMode.value === '全部关系') {
-    downStreams.forEach((name) => {
-      addNode(name, 2)
-      addLink(current, name, 2)
-    })
-  }
+  })
 
-  if (viewMode.value === '全部关系') {
-    nodes.push({ name: 'cycle-node', category: 3, symbolSize: 26 })
-    links.push({ source: 'device_status_log', target: 'cycle-node', lineStyle: { color: '#ED7B2F', width: 2, type: 'dashed' } })
-    nodes.push({ name: 'isolated-node', category: 3, symbolSize: 22 })
-  }
-
-  chart.setOption({
+  lineageChart.setOption({
     tooltip: {
-      formatter: (params: { dataType?: string; data?: { name: string } }) =>
-        params.dataType === 'edge' ? '' : `表：${params.data?.name}`,
+      trigger: 'item',
+      formatter: (params: { dataType: string; data: { mappings?: FieldLink[]; tipHtml?: string; source?: string; target?: string } }) => {
+        if (params.dataType === 'edge') {
+          const d = params.data
+          const rows = (d.mappings ?? [])
+            .map(
+              (m) =>
+                `<span style="color:#2B6CB0">${m.source}</span> —[${m.func}]→ <span style="color:#DA251D">${m.target}</span>`,
+            )
+            .join('<br/>')
+          return `<b>${d.source} → ${d.target}</b><br/><br/>${rows}`
+        }
+        return params.data?.tipHtml ?? params.data?.source ?? ''
+      },
     },
-    legend: { show: false },
-    animationDurationUpdate: 500,
     series: [
       {
         type: 'graph',
-        layout: 'force',
+        layout: 'none',
         roam: true,
         draggable: true,
         data: nodes,
         links,
-        categories: [
-          { name: '当前表', itemStyle: { color: '#DA251D' } },
-          { name: '上游', itemStyle: { color: '#2B6CB0' } },
-          { name: '下游', itemStyle: { color: '#00A854' } },
-          { name: '异常', itemStyle: { color: '#ED7B2F', opacity: 0.7 } },
-        ],
-        force: { repulsion: 480, edgeLength: [100, 180], gravity: 0.12 },
-        label: {
-          show: true,
-          position: 'bottom',
-          fontSize: 11,
-          color: '#4a4a4a',
-          formatter: (params: { name: string }) => {
-            if (params.name === 'cycle-node') return '环状依赖'
-            if (params.name === 'isolated-node') return '孤立节点'
-            return params.name
-          },
-        },
-        lineStyle: { curveness: 0.15, width: 2 },
-        emphasis: { focus: 'adjacency', lineStyle: { width: 4 } },
-        itemStyle: { borderColor: '#fff', borderWidth: 2 },
+        lineStyle: { color: '#C7CDD8', width: 0.9, curveness: 0.3, opacity: 0.9 },
+        emphasis: { focus: 'adjacency', lineStyle: { width: 2.5, color: '#DA251D', opacity: 1 } },
       },
     ],
   })
-  const instance = chart
-  instance.on('click', (params: echarts.ECElementEvent) => {
-    const data = params.data as { name?: string } | undefined
-    if (data?.name && tablePool.includes(data.name) && data.name !== current) {
-      selectedTable.value = data.name
-      renderLineage()
-    }
-  })
 }
 
-const autoDiscover = () => ElMessage.success('血缘自动发现完成：新增 5 条血缘关系（Mock）')
-const manualLink = () => ElMessage.info('已打开血缘手动维护编辑器（Mock）')
-const removeNode = () => ElMessage.info('请在图谱中选择要删除的节点（Mock）')
-const exportLineage = () => ElMessage.success('血缘关系已导出为 JSON / Excel（Mock）')
+const highlightTable = () => {
+  const keyword = searchTable.value.trim()
+  if (!keyword) {
+    ElMessage.warning('请输入要定位的表名或字段名')
+    return
+  }
+  renderLineage(keyword)
+  ElMessage.success(`已定位到「${keyword}」及其血缘链路`)
+}
 
-const handleResize = () => chart?.resize()
+const lineageDialogVisible = ref(false)
+
+type DbNode = { name: string; tables: string[] }
+
+const upDbs: DbNode[] = [
+  { name: '客票系统库', tables: ['ticket_sale_detail', 'passenger_info'] },
+  { name: '基础信息库', tables: ['station_info', 'line_info'] },
+  { name: '设备监控库', tables: ['device_status_log'] },
+]
+
+const downDbs: DbNode[] = [
+  { name: '数据仓库ODS', tables: ['flow_stat_daily', 'ods_station'] },
+  { name: '数据仓库DWS', tables: ['train_operation_log', 'dws_passenger_flow'] },
+]
+
+const funcOptions = ['直接映射', 'TO_DATE()', 'NVL()', 'TRIM()', 'CONCAT()', 'CASE WHEN', 'SUM()', 'COUNT()', 'AVG()', 'JOIN 映射']
+
+type ReportLink = {
+  id: number
+  upDb: string
+  upTable: string
+  downDb: string
+  downTable: string
+  func: string
+}
+
+type Point = { x: number; y: number }
+
+const reportLinks = ref<ReportLink[]>([])
+const activeLinkId = ref<number | null>(null)
+const hoverLinkId = ref<number | null>(null)
+const linkRevision = ref(0)
+let reportLinkSeq = 0
+
+const wrapRef = ref<HTMLElement>()
+const tableEls = new Map<string, HTMLElement>()
+
+const setTableEl =
+  (key: string) =>
+  (el: unknown) => {
+    if (el instanceof HTMLElement) tableEls.set(key, el)
+  }
+
+const wrapRect = () => wrapRef.value?.getBoundingClientRect()
+
+const sidePoint = (el: HTMLElement, side: 'left' | 'right'): Point => {
+  const wr = wrapRect()
+  if (!wr) return { x: 0, y: 0 }
+  const r = el.getBoundingClientRect()
+  return { x: r.left - wr.left + (side === 'right' ? r.width : 0), y: r.top - wr.top + r.height / 2 }
+}
+
+type ReportLinkView = ReportLink & { path: string; mid?: Point }
+
+const computedLinks = computed<ReportLinkView[]>(() => {
+  void linkRevision.value
+  const wr = wrapRect()
+  if (!wr) return []
+  return reportLinks.value.map((lnk) => {
+    const sp = tableEls.get(`up:${lnk.upDb}:${lnk.upTable}`)
+    const dp = tableEls.get(`down:${lnk.downDb}:${lnk.downTable}`)
+    if (!sp || !dp) return { ...lnk, path: '' }
+    const s = sidePoint(sp, 'right')
+    const d = sidePoint(dp, 'left')
+    const dx = Math.max(60, (d.x - s.x) / 2)
+    return {
+      ...lnk,
+      path: `M ${s.x} ${s.y} C ${s.x + dx} ${s.y}, ${d.x - dx} ${d.y}, ${d.x} ${d.y}`,
+      mid: { x: (s.x + d.x) / 2, y: (s.y + d.y) / 2 },
+    }
+  })
+})
+
+const hoverTip = computed(() => {
+  const lnk = computedLinks.value.find((l) => l.id === hoverLinkId.value)
+  if (!lnk || !lnk.mid) return null
+  return { x: lnk.mid.x, y: lnk.mid.y, text: `${lnk.upTable} —[${lnk.func}]→ ${lnk.downTable}` }
+})
+
+const dragging = ref<{ side: 'up' | 'down'; key: string; start: Point } | null>(null)
+const dragPos = ref<Point>({ x: 0, y: 0 })
+
+const tempPath = computed(() => {
+  const d = dragging.value
+  if (!d) return ''
+  const p = dragPos.value
+  const dx = Math.max(60, (p.x - d.start.x) / 2)
+  return `M ${d.start.x} ${d.start.y} C ${d.start.x + dx} ${d.start.y}, ${p.x - dx} ${p.y}, ${p.x} ${p.y}`
+})
+
+const toWrapPoint = (e: PointerEvent): Point => {
+  const wr = wrapRect()
+  if (!wr) return { x: 0, y: 0 }
+  return { x: e.clientX - wr.left, y: e.clientY - wr.top }
+}
+
+const startDrag = (e: PointerEvent, side: 'up' | 'down', db: string, table: string) => {
+  if (e.button !== 0) return
+  e.preventDefault()
+  const key = `${side}:${db}:${table}`
+  const el = tableEls.get(key)
+  if (!el) return
+  dragging.value = { side, key, start: sidePoint(el, side === 'up' ? 'right' : 'left') }
+  dragPos.value = dragging.value.start
+  window.addEventListener('pointermove', onDragMove)
+  window.addEventListener('pointerup', onDragUp)
+}
+
+const onDragMove = (e: PointerEvent) => {
+  if (!dragging.value) return
+  dragPos.value = toWrapPoint(e)
+}
+
+const onDragUp = (e: PointerEvent) => {
+  const d = dragging.value
+  if (d) {
+    const p = toWrapPoint(e)
+    const targetSide = d.side === 'up' ? 'down' : 'up'
+    const hit = [...tableEls.entries()].find(([key, el]) => {
+      if (!key.startsWith(`${targetSide}:`)) return false
+      const wr = wrapRect()
+      if (!wr) return false
+      const r = el.getBoundingClientRect()
+      return (
+        p.x >= r.left - wr.left - 8 &&
+        p.x <= r.left - wr.left + r.width + 8 &&
+        p.y >= r.top - wr.top - 8 &&
+        p.y <= r.top - wr.top + r.height + 8
+      )
+    })
+    if (hit) {
+      const targetKey = hit[0]
+      const [, tDb, tTable] = targetKey.split(':')
+      const [, sDb, sTable] = d.key.split(':')
+      const up = d.side === 'up' ? { db: sDb, table: sTable } : { db: tDb, table: tTable }
+      const down = d.side === 'down' ? { db: sDb, table: sTable } : { db: tDb, table: tTable }
+      const dup = reportLinks.value.some((l) => l.upTable === up.table && l.downTable === down.table)
+      if (dup) {
+        ElMessage.warning(`「${up.table} → ${down.table}」已存在，请先删除原连线`)
+      } else {
+        reportLinks.value.push({
+          id: ++reportLinkSeq,
+          upDb: up.db,
+          upTable: up.table,
+          downDb: down.db,
+          downTable: down.table,
+          func: '直接映射',
+        })
+        linkRevision.value++
+      }
+    }
+  }
+  cleanupDrag()
+}
+
+const cleanupDrag = () => {
+  dragging.value = null
+  window.removeEventListener('pointermove', onDragMove)
+  window.removeEventListener('pointerup', onDragUp)
+}
+
+const openLineageDialog = () => {
+  reportLinks.value = []
+  activeLinkId.value = null
+  lineageDialogVisible.value = true
+  nextTick(() => linkRevision.value++)
+}
+
+const resetBuilder = () => {
+  reportLinks.value = []
+  activeLinkId.value = null
+  linkRevision.value++
+}
+
+const removeLink = (id: number) => {
+  reportLinks.value = reportLinks.value.filter((l) => l.id !== id)
+  if (activeLinkId.value === id) activeLinkId.value = null
+  linkRevision.value++
+}
+
+const onRowClick = (row: ReportLink) => {
+  activeLinkId.value = row.id
+}
+
+const ensureReportTable = (table: string, field: string, side: 'up' | 'down') => {
+  if (!tableFields[table]) {
+    tableFields[table] = [field]
+    const layer: Layer = /^(dws|ads|rpt|report)/i.test(table)
+      ? 'target'
+      : /^(dim|dwd|ods|mid|fct)/i.test(table)
+        ? 'mid'
+        : side === 'up'
+          ? 'source'
+          : 'mid'
+    layerTables[layer].push(table)
+    tableMeta[table] = { label: `新增表 ${table}`, layer }
+  } else if (field && !tableFields[table].includes(field)) {
+    tableFields[table].push(field)
+  }
+}
+
+const saveLineage = () => {
+  if (!reportLinks.value.length) {
+    ElMessage.warning('请先从左侧拖拽连线到右侧，建立至少一条血缘关系')
+    return
+  }
+  const baseCount = fieldLineage.length
+  reportLinks.value.forEach((lnk) => {
+    const source = `${lnk.upTable}.${lnk.upTable}_id`
+    const target = `${lnk.downTable}.${lnk.downTable}_id`
+    fieldLineage.push({
+      source,
+      target,
+      func: lnk.func || '直接映射',
+      flow: Math.round(Math.random() * 5000) + 500,
+    })
+    ensureReportTable(lnk.upTable, `${lnk.upTable}_id`, 'up')
+    ensureReportTable(lnk.downTable, `${lnk.downTable}_id`, 'down')
+  })
+  renderLineage()
+  lineageDialogVisible.value = false
+  reportLinks.value = []
+  ElMessage.success(`血缘填报成功，新增 ${fieldLineage.length - baseCount} 条字段级血缘关系`)
+}
+
+const handleResize = () => lineageChart?.resize()
+
+watch(activeTab, () => {
+  if (activeTab.value === 'visual') {
+    nextTick(() => handleResize())
+  }
+})
+
+let reportResizeObserver: ResizeObserver | null = null
+
+watch(lineageDialogVisible, (visible) => {
+  if (visible) {
+    nextTick(() => {
+      // 弹框打开后重算连线坐标，并监听容器尺寸变化自动刷新
+      linkRevision.value++
+      reportResizeObserver?.disconnect()
+      if (wrapRef.value && typeof ResizeObserver !== 'undefined') {
+        reportResizeObserver = new ResizeObserver(() => linkRevision.value++)
+        reportResizeObserver.observe(wrapRef.value)
+      }
+    })
+  } else {
+    reportResizeObserver?.disconnect()
+    reportResizeObserver = null
+  }
+})
+
+let chartResizeObserver: ResizeObserver | null = null
 
 onMounted(() => {
   renderLineage()
   window.addEventListener('resize', handleResize)
+  // 容器尺寸变化时自动同步 ECharts 画布（CSS 高度变化 / 折叠侧栏 / 标签页切换等）
+  if (lineageChartRef.value && typeof ResizeObserver !== 'undefined') {
+    chartResizeObserver = new ResizeObserver(() => handleResize())
+    chartResizeObserver.observe(lineageChartRef.value)
+  }
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
-  chart?.dispose()
+  chartResizeObserver?.disconnect()
+  reportResizeObserver?.disconnect()
+  lineageChart?.dispose()
 })
 </script>
+
+<style lang="scss" scoped>
+/* el-dialog 渲染为子组件内部节点，需用全局选择器才能确保命中 */
+:global(.lineage-report-dialog .el-dialog__header) {
+  padding: 12px 20px;
+  margin-right: 0;
+}
+
+:global(.lineage-report-dialog .el-dialog__body) {
+  padding: 8px 20px 4px;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 128px);
+  min-height: 420px;
+}
+
+:global(.lineage-report-dialog .el-dialog__footer) {
+  padding: 8px 20px 14px;
+}
+
+.lineage-page {
+  height: 100%;
+}
+
+.lineage-tabs-wrap {
+  height: 100%;
+  min-height: 540px;
+  display: flex;
+  flex-direction: column;
+
+  :deep(.el-tabs--border-card) {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-radius: 8px;
+  }
+
+  :deep(.el-tabs__content) {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  :deep(.el-tab-pane) {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
+.lineage-visual-pane,
+.lineage-detail-pane,
+.lineage-anomaly-pane {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.lineage-anomaly-pane {
+  overflow: auto;
+}
+
+.lineage-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.filter-select-sm {
+  width: 130px;
+}
+
+.lineage-detail-pane {
+  :deep(.el-table) {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+.lineage-chart {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+}
+
+.sankey-legend {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 6px 2px 0;
+}
+
+.sankey-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.sankey-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.anomaly-text {
+  color: #4a4a4a;
+  line-height: 1.6;
+}
+
+.anomaly-stats {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.anomaly-stat {
+  flex: 1;
+  min-width: 110px;
+  border: 1px solid #edf0f5;
+  border-radius: 8px;
+  padding: 14px;
+  text-align: center;
+  background: #fafafa;
+}
+
+.anomaly-stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.anomaly-stat-label {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.field-source {
+  color: #2b6cb0;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.field-target {
+  color: #da251d;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.lineage-report-dialog {
+  .report-hint {
+    margin-bottom: 10px;
+
+    .hint-strong {
+      font-weight: 700;
+      color: #da251d;
+      margin: 0 2px;
+    }
+  }
+
+  .report-builder {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: calc(100vh - 190px);
+    min-height: 420px;
+  }
+
+  .report-canvas-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    border: 1px solid #e5e9f0;
+    border-radius: 8px;
+    background-color: #fbfcfe;
+    background-image: radial-gradient(#e8ecf3 1px, transparent 1px);
+    background-size: 20px 20px;
+    overflow: hidden;
+  }
+
+  .report-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+
+    path {
+      fill: none;
+      stroke: #c7cdd8;
+      stroke-width: 1.6;
+      pointer-events: strokePainted;
+      cursor: pointer;
+
+      &:hover,
+      &.is-active {
+        stroke: #da251d;
+        stroke-width: 2.6;
+      }
+    }
+  }
+
+  .report-temp-path {
+    stroke: #da251d;
+    stroke-width: 1.6;
+    stroke-dasharray: 6 4;
+    pointer-events: none;
+  }
+
+  .report-hover-tip {
+    position: absolute;
+    z-index: 5;
+    max-width: 320px;
+    background: rgba(42, 46, 53, 0.88);
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    pointer-events: none;
+    transform: translate(-50%, -135%);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .report-side {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 240px;
+    overflow-y: auto;
+    background: #fff;
+    z-index: 1;
+  }
+
+  .report-side-left {
+    left: 0;
+    border-right: 1px solid #edf0f5;
+  }
+
+  .report-side-right {
+    right: 0;
+    border-left: 1px solid #edf0f5;
+  }
+
+  .side-title {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f7f8fa;
+    font-size: 12px;
+    font-weight: 700;
+    color: #4a4a4a;
+    padding: 8px 12px;
+    border-bottom: 1px solid #edf0f5;
+  }
+
+  .db-section {
+    padding: 0 0 6px;
+  }
+
+  .db-head {
+    font-size: 12px;
+    color: #8c8c8c;
+    padding: 10px 12px 4px;
+    font-weight: 600;
+  }
+
+  .table-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    cursor: grab;
+    border-radius: 6px;
+    user-select: none;
+
+    &:hover {
+      background: #f3f6fb;
+      .port {
+        border-color: #da251d;
+        background: #fff1f0;
+      }
+    }
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    .table-name {
+      font-size: 12px;
+      color: #333;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .port {
+    flex: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #b6bfcb;
+  }
+
+  .report-links {
+    flex: 0 0 auto;
+  }
+
+  .report-footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .report-count {
+    flex: 1;
+    font-size: 12px;
+    color: #8c8c8c;
+  }
+}
+</style>
