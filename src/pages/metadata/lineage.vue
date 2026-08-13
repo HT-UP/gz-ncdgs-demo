@@ -14,7 +14,6 @@
                 @keyup.enter="highlightTable"
               />
               <el-button type="danger" size="small" @click="highlightTable">定位</el-button>
-              <el-button size="small" :icon="Connection" @click="openLineageDialog">血缘填报</el-button>
             </div>
             <div ref="lineageChartRef" class="lineage-chart"></div>
             <div class="sankey-legend">
@@ -74,6 +73,99 @@
             </div>
           </div>
         </el-tab-pane>
+
+        <el-tab-pane label="血缘填报列表" name="report">
+          <div class="report-pane">
+            <div class="report-pane-toolbar">
+              <el-button type="danger" size="small" :icon="Connection" @click="openLineageDialog">新建血缘填报</el-button>
+              <el-input
+                v-model="batchKeyword"
+                placeholder="按填报单号 / 填报人 / 说明搜索"
+                clearable
+                size="small"
+                class="search-input-sm"
+                :prefix-icon="Search"
+              />
+              <el-select v-model="batchStatusFilter" placeholder="状态" clearable size="small" class="filter-select-sm">
+                <el-option v-for="s in batchStatusList" :key="s" :label="s" :value="s" />
+              </el-select>
+              <span class="dep-text">共 {{ filteredBatches.length }} 个填报批次 · 已生效 {{ passedBatches }} 个</span>
+            </div>
+
+            <el-table :data="filteredBatches" size="small" stripe class="batch-table">
+              <el-table-column type="expand">
+                <template #default="{ row }">
+                  <div class="batch-detail">
+                    <div v-if="row.title" class="batch-detail-title">填报说明：{{ row.title }}</div>
+                    <el-table :data="row.links" size="mini" border>
+                      <el-table-column label="上游（表 · 字段）" min-width="190">
+                        <template #default="{ row: l }">
+                          <span class="field-source">{{ l.upTable }}.{{ l.upField }}</span>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="处理函数" width="130">
+                        <template #default="{ row: l }">
+                          <el-tag size="small" type="warning" effect="plain">{{ l.func }}</el-tag>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="下游（表 · 字段）" min-width="190">
+                        <template #default="{ row: l }">
+                          <span class="field-target">{{ l.downTable }}.{{ l.downField }}</span>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="校验" min-width="230">
+                        <template #default="{ row: l }">
+                          <template v-if="l.issues && l.issues.length">
+                            <el-tag v-for="(it, i) in l.issues" :key="i" size="mini" :type="it.level === 'error' ? 'danger' : 'warning'" effect="plain" class="mr-4">{{ it.text }}</el-tag>
+                          </template>
+                          <el-tag v-else size="mini" type="success" effect="plain">通过</el-tag>
+                        </template>
+                      </el-table-column>
+                    </el-table>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column prop="id" label="填报单号" width="130" />
+              <el-table-column prop="creator" label="填报人" width="76" />
+              <el-table-column prop="createTime" label="填报时间" width="128" />
+              <el-table-column label="连线数" width="72" align="center">
+                <template #default="{ row }">
+                  <span class="dep-text">{{ row.links.length }} 条</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="校验结果" width="106">
+                <template #default="{ row }">
+                  <el-tag v-if="row.errorCount === 0" type="success" effect="dark" size="small">校验通过</el-tag>
+                  <el-tag v-else type="danger" effect="dark" size="small">{{ row.errorCount }} 项异常</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="状态" width="86">
+                <template #default="{ row }">
+                  <el-tag :type="batchStatusTag[row.status]" effect="dark" size="small">{{ row.status }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="审批人 / 审批时间" min-width="150">
+                <template #default="{ row }">
+                  <span class="dep-text">{{ row.approver ? `${row.approver} · ${row.approveTime}` : '—' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="图谱版本" width="84" align="center">
+                <template #default="{ row }">
+                  <span class="dep-text">{{ row.versionNo || '—' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="210" fixed="right" align="center">
+                <template #default="{ row }">
+                  <el-button v-if="row.status === '草稿'" link type="primary" size="small" @click="editBatch(row)">编辑</el-button>
+                  <el-button v-if="row.status === '草稿'" link type="warning" size="small" @click="submitBatch(row)">提交审批</el-button>
+                  <el-button v-if="row.status === '待审批'" link type="warning" size="small" @click="openApproveDialog(row)">审批</el-button>
+                  <el-button v-if="['已通过', '已回滚'].includes(row.status)" link type="primary" size="small" @click="openVersionCompare(row)">版本对比</el-button>
+                  <el-button v-if="row.status === '已通过'" link type="danger" size="small" @click="rollbackBatch(row)">回滚</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </div>
 
@@ -87,9 +179,15 @@
       <el-alert class="report-hint" type="info" :closable="false" show-icon>
         <template #title>
           从左侧<span class="hint-strong">上游源表</span>的行或端口按住拖拽，连线到右侧<span class="hint-strong">下游目标表</span>的行，
-          松手即建立一条血缘连线；连线在下表可调整处理函数，保存后血缘图实时更新。
+          松手即建立一条血缘连线；请在下方为每条连线选择<span class="hint-strong">源字段 / 目标字段</span>并调整处理函数，
+          系统将自动执行对象存在性、字段类型匹配、环路、重复与自引用校验，通过后可提交审批，审批通过后生效入图谱。
         </template>
       </el-alert>
+
+      <div class="report-title-row">
+        <span class="dep-text">填报说明</span>
+        <el-input v-model="reportTitle" size="small" placeholder="本次填报的目的与说明（选填）" />
+      </div>
 
       <div class="report-builder">
         <div id="report-canvas" ref="wrapRef" class="report-canvas-wrap">
@@ -144,25 +242,55 @@
         </div>
 
         <div class="report-links">
-          <el-table :data="reportLinks" size="small" height="150" highlight-current-row @row-click="onRowClick">
-            <el-table-column label="上游（数据库 · 表）" min-width="180">
+          <el-table :data="reportLinks" size="small" height="176" highlight-current-row @row-click="onRowClick">
+            <el-table-column label="上游（数据库 · 表）" min-width="170">
               <template #default="{ row }">
                 <span class="field-source">{{ row.upDb }} · {{ row.upTable }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="处理函数" width="180">
+            <el-table-column label="源字段" width="120">
+              <template #default="{ row }">
+                <el-select v-model="row.upField" size="small" filterable allow-create default-first-option placeholder="选择 / 输入" @change="validateReportLinks">
+                  <el-option v-for="f in fieldsOf(row.upTable)" :key="f" :label="f" :value="f" />
+                </el-select>
+              </template>
+            </el-table-column>
+            <el-table-column label="处理函数" width="140">
               <template #default="{ row }">
                 <el-select v-model="row.func" size="small" filterable allow-create default-first-option>
                   <el-option v-for="f in funcOptions" :key="f" :label="f" :value="f" />
                 </el-select>
               </template>
             </el-table-column>
-            <el-table-column label="下游（数据库 · 表）" min-width="180">
+            <el-table-column label="目标字段" width="120">
+              <template #default="{ row }">
+                <el-select v-model="row.downField" size="small" filterable allow-create default-first-option placeholder="选择 / 输入" @change="validateReportLinks">
+                  <el-option v-for="f in fieldsOf(row.downTable)" :key="f" :label="f" :value="f" />
+                </el-select>
+              </template>
+            </el-table-column>
+            <el-table-column label="下游（数据库 · 表）" min-width="170">
               <template #default="{ row }">
                 <span class="field-target">{{ row.downDb }} · {{ row.downTable }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="80" align="center">
+            <el-table-column label="校验" width="150">
+              <template #default="{ row }">
+                <el-tooltip :disabled="!row.issues || !row.issues.length" placement="top">
+                  <template #content>
+                    <div v-for="(it, i) in row.issues" :key="i" class="issue-line" :class="it.level === 'error' ? 'issue-error' : 'issue-warn'">
+                      {{ it.level === 'error' ? '✗' : '!' }} {{ it.text }}
+                    </div>
+                  </template>
+                  <el-tag v-if="hasErrorIssue(row.issues)" type="danger" size="small" effect="dark">
+                    {{ errorIssueCount(row.issues) }} 项异常
+                  </el-tag>
+                  <el-tag v-else-if="hasWarnIssue(row.issues)" type="warning" size="small" effect="plain">有提示</el-tag>
+                  <el-tag v-else type="success" size="small" effect="plain">通过</el-tag>
+                </el-tooltip>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="64" align="center">
               <template #default="{ row }">
                 <el-button type="danger" link :icon="Delete" @click.stop="removeLink(row.id)" />
               </template>
@@ -173,21 +301,107 @@
 
       <template #footer>
         <div class="report-footer">
-          <span class="report-count">已填报 {{ reportLinks.length }} 条血缘连线</span>
+          <span class="report-count">
+            已填报 {{ reportLinks.length }} 条 · 校验
+            <span :class="batchErrorCount > 0 ? 'issue-error' : 'trend-positive'">{{ batchErrorCount > 0 ? `${batchErrorCount} 项异常` : '全部通过' }}</span>
+          </span>
           <el-button size="small" @click="resetBuilder">重置</el-button>
           <el-button size="small" @click="lineageDialogVisible = false">取消</el-button>
-          <el-button type="danger" size="small" @click="saveLineage">保存</el-button>
+          <el-button size="small" type="primary" @click="saveBatch('草稿')">存草稿</el-button>
+          <el-button type="danger" size="small" :disabled="batchErrorCount > 0" @click="saveBatch('待审批')">提交审批</el-button>
         </div>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="approveVisible" title="血缘填报审批" width="680px" class="batch-approve-dialog" destroy-on-close>
+      <template v-if="approveTarget">
+        <el-descriptions :column="2" border size="small">
+          <el-descriptions-item label="填报单号">{{ approveTarget.id }}</el-descriptions-item>
+          <el-descriptions-item label="填报人">{{ approveTarget.creator }}</el-descriptions-item>
+          <el-descriptions-item label="填报时间" :span="1">{{ approveTarget.createTime }}</el-descriptions-item>
+          <el-descriptions-item label="连线数量">{{ approveTarget.links.length }} 条</el-descriptions-item>
+          <el-descriptions-item label="校验结果" :span="2">
+            <el-tag size="small" :type="approveTarget.errorCount === 0 ? 'success' : 'danger'" effect="dark">
+              {{ approveTarget.errorCount === 0 ? '校验通过' : `${approveTarget.errorCount} 项异常` }}
+            </el-tag>
+          </el-descriptions-item>
+        </el-descriptions>
+        <div class="block-title">待审批血缘明细</div>
+        <div class="approve-links">
+          <div v-for="l in approveTarget.links" :key="l.id" class="approve-link-item">
+            <span class="field-source">{{ l.upTable }}.{{ l.upField }}</span>
+            <span class="dep-text">—[{{ l.func }}]→</span>
+            <span class="field-target">{{ l.downTable }}.{{ l.downField }}</span>
+          </div>
+        </div>
+        <el-form label-width="84px" class="approve-form">
+          <el-form-item label="审批人">
+            <el-select v-model="approveForm.approver" class="w-full">
+              <el-option v-for="a in approverPool" :key="a" :label="a" :value="a" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="审批意见">
+            <el-input v-model="approveForm.comment" type="textarea" :rows="3" placeholder="请填写审批意见（必填）" />
+          </el-form-item>
+        </el-form>
+      </template>
+      <template #footer>
+        <el-button @click="approveVisible = false">取消</el-button>
+        <el-button type="danger" @click="doApprove(false)">驳回</el-button>
+        <el-button type="primary" @click="doApprove(true)">审批通过</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="compareVisible" title="填报版本对比" width="720px" class="version-compare-dialog" destroy-on-close>
+      <div class="compare-bar">
+        <span class="dep-text">基线版本</span>
+        <el-select v-model="compareBase" size="small" class="filter-select-sm" filterable>
+          <el-option v-for="v in compareOptions" :key="v.value" :label="v.label" :value="v.value" />
+        </el-select>
+        <span class="dep-text">对比版本</span>
+        <el-select v-model="compareTarget" size="small" class="filter-select-sm" filterable>
+          <el-option v-for="v in compareOptions" :key="v.value" :label="v.label" :value="v.value" />
+        </el-select>
+      </div>
+      <div class="compare-summary">
+        <span>新增 <b class="issue-error">{{ diffResult.added.length }}</b> 条</span>
+        <span>移除 <b class="dep-text">{{ diffResult.removed.length }}</b> 条</span>
+        <span>未变化 <b class="trend-positive">{{ diffResult.common }}</b> 条</span>
+      </div>
+      <el-table :data="diffRows" size="small" max-height="380" stripe>
+        <el-table-column label="变更" width="70" align="center">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.change === '新增' ? 'danger' : row.change === '移除' ? 'info' : 'success'" effect="dark">{{ row.change }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="上游（表 · 字段）" min-width="210">
+          <template #default="{ row }">
+            <span class="field-source">{{ row.source }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="处理函数" width="140">
+          <template #default="{ row }">
+            <el-tag size="small" type="warning" effect="plain">{{ row.func }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="下游（表 · 字段）" min-width="210">
+          <template #default="{ row }">
+            <span class="field-target">{{ row.target }}</span>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button type="primary" plain @click="compareVisible = false">关闭</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import * as echarts from 'echarts'
-import { Connection, Delete } from '@element-plus/icons-vue'
+import { Connection, Delete, Search } from '@element-plus/icons-vue'
 
 type FieldLink = {
   source: string
@@ -517,6 +731,9 @@ type ReportLink = {
   downDb: string
   downTable: string
   func: string
+  upField: string
+  downField: string
+  issues?: { level: 'error' | 'warn'; text: string }[]
 }
 
 type Point = { x: number; y: number }
@@ -640,8 +857,11 @@ const onDragUp = (e: PointerEvent) => {
           downDb: down.db,
           downTable: down.table,
           func: '直接映射',
+          upField: `${up.table}_id`,
+          downField: `${down.table}_id`,
         })
         linkRevision.value++
+        validateReportLinks()
       }
     }
   }
@@ -655,22 +875,41 @@ const cleanupDrag = () => {
 }
 
 const openLineageDialog = () => {
+  editingBatchId.value = null
+  reportTitle.value = ''
   reportLinks.value = []
   activeLinkId.value = null
   lineageDialogVisible.value = true
-  nextTick(() => linkRevision.value++)
+  nextTick(() => {
+    linkRevision.value++
+    validateReportLinks()
+  })
+}
+
+const editBatch = (batch: ReportBatch) => {
+  editingBatchId.value = batch.id
+  reportTitle.value = batch.title
+  reportLinks.value = batch.links.map((l) => ({ ...l }))
+  activeLinkId.value = null
+  lineageDialogVisible.value = true
+  nextTick(() => {
+    linkRevision.value++
+    validateReportLinks()
+  })
 }
 
 const resetBuilder = () => {
   reportLinks.value = []
   activeLinkId.value = null
   linkRevision.value++
+  validateReportLinks()
 }
 
 const removeLink = (id: number) => {
   reportLinks.value = reportLinks.value.filter((l) => l.id !== id)
   if (activeLinkId.value === id) activeLinkId.value = null
   linkRevision.value++
+  validateReportLinks()
 }
 
 const onRowClick = (row: ReportLink) => {
@@ -694,28 +933,429 @@ const ensureReportTable = (table: string, field: string, side: 'up' | 'down') =>
   }
 }
 
-const saveLineage = () => {
+/* ==================== 血缘填报 · 校验 ==================== */
+const tableFieldTypes: Record<string, string> = {
+  'ticket_sale.order_id': 'STRING', 'ticket_sale.order_date': 'DATE', 'ticket_sale.line_code': 'STRING',
+  'ticket_sale.amount': 'DECIMAL', 'ticket_sale.ticket_type': 'STRING', 'ticket_sale.status': 'STRING',
+  'ticket_sale.create_time': 'TIMESTAMP',
+  'passenger_info.passenger_id': 'STRING', 'passenger_info.passenger_name': 'STRING', 'passenger_info.age': 'INT',
+  'passenger_info.phone': 'STRING', 'passenger_info.create_time': 'TIMESTAMP',
+  'station_info.station_code': 'STRING', 'station_info.station_name': 'STRING', 'station_info.station_type': 'STRING',
+  'station_info.status': 'STRING',
+  'line_info.line_code': 'STRING', 'line_info.line_name': 'STRING', 'line_info.status': 'STRING',
+  'dwd_order_detail.order_id': 'STRING', 'dwd_order_detail.order_date': 'DATE', 'dwd_order_detail.line_code': 'STRING',
+  'dwd_order_detail.amount': 'DECIMAL', 'dwd_order_detail.ticket_type': 'STRING', 'dwd_order_detail.create_time': 'TIMESTAMP',
+  'dim_passenger.passenger_id': 'STRING', 'dim_passenger.passenger_name': 'STRING', 'dim_passenger.age_group': 'STRING',
+  'dim_passenger.create_time': 'TIMESTAMP',
+  'dim_station.station_code': 'STRING', 'dim_station.station_name': 'STRING',
+  'dim_line.line_code': 'STRING', 'dim_line.line_name': 'STRING',
+  'dws_order_report.order_id': 'STRING', 'dws_order_report.order_date': 'DATE', 'dws_order_report.line_code': 'STRING',
+  'dws_order_report.line_name': 'STRING', 'dws_order_report.total_amount': 'DECIMAL', 'dws_order_report.order_count': 'INT',
+  'dws_order_report.ticket_type': 'STRING', 'dws_order_report.create_time': 'TIMESTAMP',
+  'ads_line_flow.line_code': 'STRING', 'ads_line_flow.line_name': 'STRING', 'ads_line_flow.station_code': 'STRING',
+  'ads_line_flow.station_name': 'STRING', 'ads_line_flow.total_passengers': 'INT', 'ads_line_flow.avg_age': 'DECIMAL',
+  'ads_line_flow.flow_date': 'DATE', 'ads_line_flow.update_time': 'TIMESTAMP',
+}
+
+const knownTables = computed(() => {
+  const set = new Set<string>(Object.keys(tableFields))
+  upDbs.forEach((db) => db.tables.forEach((t) => set.add(t)))
+  downDbs.forEach((db) => db.tables.forEach((t) => set.add(t)))
+  return set
+})
+
+const fieldsOf = (table: string) => tableFields[table] || []
+
+const typeGroup = (t: string) =>
+  ['INT', 'BIGINT', 'DECIMAL', 'DOUBLE', 'NUMERIC'].includes(t) ? 'num' : ['DATE', 'DATETIME', 'TIMESTAMP'].includes(t) ? 'time' : t
+
+const typeCompatible = (a: string, b: string) => typeGroup(a) === typeGroup(b) || typeGroup(b) === 'STRING'
+
+const reachable = (adj: Map<string, Set<string>>, from: string, to: string) => {
+  if (!adj.has(from)) return false
+  const queue = [from]
+  const seen = new Set([from])
+  while (queue.length) {
+    const cur = queue.shift()!
+    if (cur === to) return true
+    for (const next of adj.get(cur) ?? []) {
+      if (!seen.has(next)) {
+        seen.add(next)
+        queue.push(next)
+      }
+    }
+  }
+  return false
+}
+
+const reportTitle = ref('')
+const editingBatchId = ref<string | null>(null)
+const batchErrorCount = ref(0)
+
+const errorIssueCount = (issues?: ReportLink['issues']) => (issues ?? []).filter((i) => i.level === 'error').length
+const hasErrorIssue = (issues?: ReportLink['issues']) => errorIssueCount(issues) > 0
+const hasWarnIssue = (issues?: ReportLink['issues']) => (issues ?? []).some((i) => i.level === 'warn')
+
+const validateReportLinks = () => {
+  const existingEdges = new Set(fieldLineage.map((f) => `${f.source.split('.')[0]}>${f.target.split('.')[0]}`))
+  const adj = new Map<string, Set<string>>()
+  fieldLineage.forEach((f) => {
+    const u = f.source.split('.')[0]
+    const v = f.target.split('.')[0]
+    if (!adj.has(u)) adj.set(u, new Set())
+    adj.get(u)!.add(v)
+  })
+
+  reportLinks.value.forEach((l) => {
+    const issues: { level: 'error' | 'warn'; text: string }[] = []
+    const upT = l.upTable
+    const downT = l.downTable
+    const upF = l.upField || ''
+    const downF = l.downField || ''
+
+    // 自引用检测
+    if (upT === downT && upF === downF) {
+      issues.push({ level: 'error', text: '自引用检测：上下游为同一字段' })
+    } else if (upT === downT) {
+      issues.push({ level: 'error', text: '自引用检测：字段归属同一张表，请确认血缘方向' })
+    }
+
+    // 对象存在性检测
+    if (!knownTables.value.has(upT)) issues.push({ level: 'error', text: `对象存在性：上游表「${upT}」在元数据中不存在` })
+    if (!knownTables.value.has(downT)) issues.push({ level: 'error', text: `对象存在性：下游表「${downT}」在元数据中不存在` })
+    if (tableFields[upT] && upF && !tableFields[upT].includes(upF)) {
+      issues.push({ level: 'warn', text: `上游字段「${upF}」尚未在元数据中采集，生效时将自动补齐` })
+    }
+    if (tableFields[downT] && downF && !tableFields[downT].includes(downF)) {
+      issues.push({ level: 'warn', text: `下游字段「${downF}」尚未在元数据中采集，生效时将自动补齐` })
+    }
+
+    // 字段类型匹配检测
+    if (upF && downF) {
+      const ut = tableFieldTypes[`${upT}.${upF}`]
+      const dt = tableFieldTypes[`${downT}.${downF}`]
+      if (ut && dt && !typeCompatible(ut, dt)) {
+        issues.push({ level: 'error', text: `字段类型不匹配：${upF}(${ut}) → ${downF}(${dt})` })
+      } else if (!ut || !dt) {
+        issues.push({ level: 'warn', text: '字段类型未知，建议确认映射类型' })
+      }
+    }
+
+    // 重复检测（与已生效图谱 / 本批次内）
+    const key = `${upT}>${downT}`
+    if (existingEdges.has(key)) issues.push({ level: 'error', text: '重复检测：该表级血缘在生效图谱中已存在' })
+
+    // 环路检测：加入后是否形成环（当前图中 downT 已达 upT）
+    if (reachable(adj, downT, upT)) issues.push({ level: 'error', text: '环路检测：该连线将形成血缘环路' })
+
+    if (!adj.has(upT)) adj.set(upT, new Set())
+    adj.get(upT)!.add(downT)
+    existingEdges.add(key)
+    l.issues = issues
+  })
+  batchErrorCount.value = reportLinks.value.reduce((s, l) => s + (l.issues ?? []).filter((i) => i.level === 'error').length, 0)
+}
+
+const nowText = () => new Date().toLocaleString('sv-SE').replace('T', ' ')
+
+let batchSeq = 0
+const nextBatchId = () => {
+  batchSeq++
+  return `RP-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(batchSeq).padStart(3, '0')}`
+}
+
+const saveBatch = (status: '草稿' | '待审批') => {
   if (!reportLinks.value.length) {
     ElMessage.warning('请先从左侧拖拽连线到右侧，建立至少一条血缘关系')
     return
   }
-  const baseCount = fieldLineage.length
-  reportLinks.value.forEach((lnk) => {
-    const source = `${lnk.upTable}.${lnk.upTable}_id`
-    const target = `${lnk.downTable}.${lnk.downTable}_id`
-    fieldLineage.push({
-      source,
-      target,
-      func: lnk.func || '直接映射',
-      flow: Math.round(Math.random() * 5000) + 500,
+  if (status === '待审批' && reportLinks.value.some((l) => !l.upField || !l.downField)) {
+    ElMessage.warning('存在未选择源字段 / 目标字段的连线，请补充字段')
+    return
+  }
+  validateReportLinks()
+  if (status === '待审批' && batchErrorCount.value > 0) {
+    ElMessage.warning(`存在 ${batchErrorCount.value} 项校验异常，请修复后再提交审批`)
+    return
+  }
+  const links = reportLinks.value.map((l) => ({ ...l }))
+  if (editingBatchId.value) {
+    const idx = batches.value.findIndex((b) => b.id === editingBatchId.value)
+    if (idx >= 0) {
+      const old = batches.value[idx]
+      batches.value[idx] = {
+        ...old,
+        title: reportTitle.value,
+        links,
+        errorCount: batchErrorCount.value,
+        status: status === '待审批' ? '待审批' : old.status,
+        ...(status === '待审批' ? { submitTime: nowText() } : {}),
+      }
+    }
+  } else {
+    batches.value.unshift({
+      id: nextBatchId(),
+      title: reportTitle.value,
+      creator: '当前用户',
+      createTime: nowText(),
+      links,
+      errorCount: batchErrorCount.value,
+      status,
+      ...(status === '待审批' ? { submitTime: nowText() } : {}),
     })
-    ensureReportTable(lnk.upTable, `${lnk.upTable}_id`, 'up')
-    ensureReportTable(lnk.downTable, `${lnk.downTable}_id`, 'down')
-  })
-  renderLineage()
+  }
   lineageDialogVisible.value = false
   reportLinks.value = []
-  ElMessage.success(`血缘填报成功，新增 ${fieldLineage.length - baseCount} 条字段级血缘关系`)
+  ElMessage.success(status === '草稿' ? '已保存为草稿，可在填报列表中继续编辑' : '已提交审批，等待管理员审批')
+}
+
+/* ==================== 填报批次列表 ==================== */
+type BatchStatus = '草稿' | '待审批' | '已通过' | '已驳回' | '已回滚'
+
+type ReportBatch = {
+  id: string
+  title: string
+  creator: string
+  createTime: string
+  links: ReportLink[]
+  errorCount: number
+  status: BatchStatus
+  submitTime?: string
+  approver?: string
+  approveTime?: string
+  comment?: string
+  versionNo?: string
+  rollbackTime?: string
+}
+
+const batchStatusList = ['草稿', '待审批', '已通过', '已驳回', '已回滚']
+const batchStatusTag: Record<string, 'info' | 'warning' | 'success' | 'danger' | 'primary'> = {
+  草稿: 'info',
+  待审批: 'warning',
+  已通过: 'success',
+  已驳回: 'danger',
+  已回滚: 'primary',
+}
+
+const batches = ref<ReportBatch[]>([
+  {
+    id: 'RP-20260801-001',
+    title: '支付流水接入 ODS 层（历史批次基线）',
+    creator: '张工',
+    createTime: '2026-08-01 10:20',
+    links: [
+      { id: 1, upDb: '票务运营库', upTable: 'ticket_sale', upField: 'order_id', downDb: '数据仓库ODS', downTable: 'dwd_order_detail', downField: 'order_id', func: '直接映射', issues: [] },
+      { id: 2, upDb: '票务运营库', upTable: 'passenger_info', upField: 'passenger_id', downDb: '数据仓库DIM', downTable: 'dim_passenger', downField: 'passenger_id', func: '直接映射', issues: [] },
+    ],
+    errorCount: 0,
+    status: '已通过',
+    submitTime: '2026-08-01 11:00',
+    approver: '安全管理员',
+    approveTime: '2026-08-01 15:30',
+    comment: '核对无误，准予生效',
+    versionNo: 'V2.0',
+  },
+  {
+    id: 'RP-20260806-002',
+    title: '客流指标口径拆分（待审批）',
+    creator: '李工',
+    createTime: '2026-08-06 14:00',
+    links: [
+      { id: 1, upDb: '数据仓库DWD', upTable: 'dwd_order_detail', upField: 'amount', downDb: '数据仓库DWS', downTable: 'dws_order_report', downField: 'total_amount', func: 'SUM()', issues: [] },
+    ],
+    errorCount: 0,
+    status: '待审批',
+    submitTime: '2026-08-06 16:00',
+  },
+  {
+    id: 'RP-20260810-003',
+    title: '设备状态接入运营报表（草稿，含重复连线）',
+    creator: '王工',
+    createTime: '2026-08-10 09:30',
+    links: [
+      { id: 1, upDb: '设备监控库', upTable: 'device_status_log', upField: 'device_id', downDb: '数据仓库DWS', downTable: 'train_operation_log', downField: 'device_id', func: '直接映射', issues: [] },
+      { id: 2, upDb: '数据仓库DWD', upTable: 'dwd_order_detail', upField: 'order_id', downDb: '数据仓库DWS', downTable: 'dws_order_report', downField: 'order_id', func: '直接映射', issues: [] },
+    ],
+    errorCount: 1,
+    status: '草稿',
+  },
+  {
+    id: 'RP-20260812-004',
+    title: '临时表迁移方案（已驳回）',
+    creator: '李工',
+    createTime: '2026-08-12 11:20',
+    links: [
+      { id: 1, upDb: '基础信息库', upTable: 'station_info', upField: 'station_code', downDb: '数据仓库DIM', downTable: 'dim_station', downField: 'station_code', func: '直接映射', issues: [{ level: 'warn', text: '审批意见：与已有映射重复' }] },
+    ],
+    errorCount: 0,
+    status: '已驳回',
+    submitTime: '2026-08-12 11:40',
+    approver: '安全管理员',
+    approveTime: '2026-08-12 14:10',
+    comment: '与现有血缘重复，请补充差异说明后重新提交',
+  },
+])
+
+const batchKeyword = ref('')
+const batchStatusFilter = ref('')
+
+const filteredBatches = computed(() =>
+  batches.value.filter((b) => {
+    if (batchStatusFilter.value && b.status !== batchStatusFilter.value) return false
+    if (!batchKeyword.value) return true
+    const kw = batchKeyword.value.toLowerCase()
+    return b.id.toLowerCase().includes(kw) || b.creator.toLowerCase().includes(kw) || b.title.toLowerCase().includes(kw)
+  }),
+)
+
+const passedBatches = computed(() => batches.value.filter((b) => b.status === '已通过').length)
+
+const submitBatch = (batch: ReportBatch) => {
+  if (batch.errorCount > 0) {
+    ElMessage.warning(`该批次存在 ${batch.errorCount} 项校验异常，请编辑修复后再提交`)
+    return
+  }
+  batch.status = '待审批'
+  batch.submitTime = nowText()
+  ElMessage.success(`批次「${batch.id}」已提交审批（Mock）`)
+}
+
+/* ==================== 提交审批流 ==================== */
+const approveVisible = ref(false)
+const approveTarget = ref<ReportBatch | null>(null)
+const approverPool = ['安全管理员', '数据治理管理员', '平台管理员']
+const approveForm = reactive({ approver: '安全管理员', comment: '' })
+
+let graphVersionSeq = 2
+
+const openApproveDialog = (batch: ReportBatch) => {
+  approveTarget.value = batch
+  approveForm.approver = '安全管理员'
+  approveForm.comment = ''
+  approveVisible.value = true
+}
+
+const applyBatchToLineage = (batch: ReportBatch) => {
+  let added = 0
+  batch.links.forEach((l) => {
+    const source = `${l.upTable}.${l.upField}`
+    const target = `${l.downTable}.${l.downField}`
+    if (!fieldLineage.some((f) => f.source === source && f.target === target)) {
+      fieldLineage.push({ source, target, func: l.func || '直接映射', flow: Math.round(Math.random() * 5000) + 500 })
+      added++
+    }
+    ensureReportTable(l.upTable, l.upField, 'up')
+    ensureReportTable(l.downTable, l.downField, 'down')
+  })
+  return added
+}
+
+const doApprove = (pass: boolean) => {
+  const b = approveTarget.value
+  if (!b) return
+  if (!approveForm.approver) {
+    ElMessage.warning('请选择审批人')
+    return
+  }
+  if (!approveForm.comment.trim()) {
+    ElMessage.warning('请填写审批意见')
+    return
+  }
+  if (pass && b.errorCount > 0) {
+    ElMessage.warning('该批次存在校验异常，不能审批通过')
+    return
+  }
+  if (pass) {
+    const added = applyBatchToLineage(b)
+    b.status = '已通过'
+    b.approver = approveForm.approver
+    b.approveTime = nowText()
+    b.comment = approveForm.comment
+    b.versionNo = `V${++graphVersionSeq}.0`
+    renderLineage()
+    ElMessage.success(`审批通过，${added} 条血缘已生效入图谱，当前图谱版本 ${b.versionNo}`)
+  } else {
+    b.status = '已驳回'
+    b.approver = approveForm.approver
+    b.approveTime = nowText()
+    b.comment = approveForm.comment
+    ElMessage.warning('已驳回该填报批次')
+  }
+  approveVisible.value = false
+}
+
+/* ==================== 版本对比与回滚 ==================== */
+const compareVisible = ref(false)
+const compareBase = ref('BASE')
+const compareTarget = ref('')
+const compareOptions = ref<{ label: string; value: string }[]>([])
+
+const openVersionCompare = (batch: ReportBatch) => {
+  compareOptions.value = [
+    { label: '基线版本（初始图谱 V1.0）', value: 'BASE' },
+    ...batches.value
+      .filter((b) => b.status === '已通过' || b.status === '已回滚')
+      .map((b) => ({ label: `${b.id}（${b.versionNo ?? '—'}）`, value: b.id })),
+  ]
+  compareBase.value = 'BASE'
+  compareTarget.value = batch.id
+  compareVisible.value = true
+}
+
+const snapshotOf = (option: string): { source: string; func: string; target: string }[] => {
+  if (option === 'BASE') {
+    const applied = new Set(
+      batches.value
+        .filter((b) => b.status === '已通过' || b.status === '已回滚')
+        .flatMap((b) => b.links.map((l) => `${l.upTable}.${l.upField}>${l.downTable}.${l.downField}`)),
+    )
+    return fieldLineage.filter((f) => !applied.has(`${f.source}>${f.target}`)).map((f) => ({ source: f.source, func: f.func, target: f.target }))
+  }
+  const b = batches.value.find((x) => x.id === option)
+  return b ? b.links.map((l) => ({ source: `${l.upTable}.${l.upField}`, func: l.func, target: `${l.downTable}.${l.downField}` })) : []
+}
+
+const diffResult = computed(() => {
+  const a = snapshotOf(compareBase.value)
+  const b = snapshotOf(compareTarget.value)
+  const key = (r: { source: string; target: string }) => `${r.source}>${r.target}`
+  const setB = new Set(b.map(key))
+  const setA = new Set(a.map(key))
+  return {
+    added: b.filter((r) => !setA.has(key(r))),
+    removed: a.filter((r) => !setB.has(key(r))),
+    common: a.filter((r) => setB.has(key(r))).length,
+  }
+})
+
+const diffRows = computed(() => [
+  ...diffResult.value.added.map((r) => ({ ...r, change: '新增' as const })),
+  ...diffResult.value.removed.map((r) => ({ ...r, change: '移除' as const })),
+])
+
+const rollbackBatch = (batch: ReportBatch) => {
+  ElMessageBox.confirm(
+    `确认回滚批次「${batch.id}」？该批次生效的 ${batch.links.length} 条血缘将从图谱中移除，图谱回到上一版本。`,
+    '回滚确认',
+    { type: 'warning', confirmButtonText: '确认回滚', cancelButtonText: '取消' },
+  )
+    .then(() => {
+      let removed = 0
+      batch.links.forEach((l) => {
+        const source = `${l.upTable}.${l.upField}`
+        const target = `${l.downTable}.${l.downField}`
+        const idx = fieldLineage.findIndex((f) => f.source === source && f.target === target)
+        if (idx >= 0) {
+          fieldLineage.splice(idx, 1)
+          removed++
+        }
+      })
+      batch.status = '已回滚'
+      batch.rollbackTime = nowText()
+      renderLineage()
+      ElMessage.success(`已回滚，${removed} 条血缘已从图谱移除（Mock）`)
+    })
+    .catch(() => {})
 }
 
 const handleResize = () => lineageChart?.resize()
@@ -918,6 +1558,117 @@ onBeforeUnmount(() => {
   color: #da251d;
   font-weight: 600;
   font-size: 12px;
+}
+
+/* ========== 血缘填报列表 ========== */
+.report-pane {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.report-pane-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.batch-table {
+  flex: 1;
+  min-height: 0;
+
+  :deep(.el-table__expanded-cell) {
+    background: #fafbfd;
+  }
+}
+
+.batch-detail {
+  padding: 4px 8px;
+
+  .batch-detail-title {
+    font-size: 12px;
+    color: #4a4a4a;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+}
+
+.report-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.issue-line {
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.issue-error {
+  color: #da251d;
+  font-weight: 600;
+}
+
+.issue-warn {
+  color: #ed7b2f;
+  font-weight: 600;
+}
+
+.trend-positive {
+  color: #00a854;
+  font-weight: 600;
+}
+
+.mr-4 {
+  margin-right: 4px;
+}
+
+.approve-links {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #f7f8fa;
+  border-radius: 8px;
+  padding: 10px 12px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+
+.approve-link-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.approve-form {
+  margin-top: 4px;
+}
+
+.compare-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.compare-summary {
+  display: flex;
+  gap: 18px;
+  font-size: 12px;
+  color: #4a4a4a;
+  margin-bottom: 10px;
+}
+
+.block-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #4a4a4a;
+  margin: 10px 0 8px;
 }
 
 .lineage-report-dialog {
