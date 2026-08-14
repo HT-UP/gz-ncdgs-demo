@@ -56,6 +56,7 @@
         <el-table-column label="更新时间" width="150">
           <template #default="{ row }">{{ row.updateTime }}</template>
         </el-table-column>
+        <el-table-column prop="description" label="描述" min-width="180" show-overflow-tooltip />
         <el-table-column label="操作" width="140" fixed="right">
           <template #default="{ row }">
             <el-button link type="danger" @click.stop="openEdit(row)">编辑</el-button>
@@ -79,6 +80,9 @@
 
     <el-dialog v-model="editorVisible" :title="editing ? '编辑标准' : '新增标准'" width="560px">
       <el-form :model="form" label-width="90px">
+        <el-form-item label="标准编码">
+          <el-input v-model="form.code" disabled />
+        </el-form-item>
         <el-form-item label="标准名称">
           <el-input v-model="form.name" />
         </el-form-item>
@@ -96,6 +100,20 @@
           <el-select v-model="form.owner" class="filter-select">
             <el-option v-for="owner in owners" :key="owner" :label="owner" :value="owner" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="版本">
+          <el-input v-model="form.version" placeholder="如 V1.0" />
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="form.status" class="filter-select" :disabled="!editing">
+            <el-option v-for="s in statuses" :key="s" :label="s" :value="s" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="editing" label="更新时间">
+          <el-input v-model="form.updateTime" disabled />
+        </el-form-item>
+        <el-form-item v-if="editing" label="映射字段">
+          <el-input :model-value="`${form.mappedFields} 个`" disabled />
         </el-form-item>
         <el-form-item label="描述">
           <el-input v-model="form.description" type="textarea" :rows="3" />
@@ -140,6 +158,7 @@ import {
   standardCategoryOptions,
   type StandardCategory,
   type StandardItem,
+  type StandardStatus,
 } from '@/mock/standard'
 
 const categories = standardCategoryOptions.map((item) => item.value)
@@ -168,10 +187,15 @@ const editing = ref<StandardItem | null>(null)
 const detailRow = ref<StandardItem | null>(null)
 
 const form = reactive({
+  code: '',
   name: '',
   category: '业务术语' as StandardCategory,
   domain: '客运管理',
   owner: '张三',
+  version: 'V1.0',
+  status: '草稿' as StandardStatus,
+  updateTime: '',
+  mappedFields: 0,
   description: '',
 })
 
@@ -205,17 +229,34 @@ const handleSizeChange = (size: number) => {
 
 const openCreate = () => {
   editing.value = null
-  Object.assign(form, { name: '', category: activeCategory.value, domain: domains[0], owner: owners[0], description: '' })
+  const now = new Date().toLocaleString('sv-SE').replace('T', ' ')
+  Object.assign(form, {
+    code: `BZ-${String(mockStandards.length + 1).padStart(4, '0')}`,
+    name: '',
+    category: activeCategory.value,
+    domain: domains[0],
+    owner: owners[0],
+    version: 'V1.0',
+    status: '草稿',
+    updateTime: now,
+    mappedFields: 0,
+    description: '',
+  })
   editorVisible.value = true
 }
 
 const openEdit = (row: StandardItem) => {
   editing.value = row
   Object.assign(form, {
+    code: row.code,
     name: row.name,
     category: row.category,
     domain: row.domain,
     owner: row.owner,
+    version: row.version,
+    status: row.status,
+    updateTime: row.updateTime,
+    mappedFields: row.mappedFields,
     description: row.description,
   })
   editorVisible.value = true
@@ -227,23 +268,30 @@ const saveForm = () => {
     return
   }
   if (editing.value) {
+    editing.value.code = form.code
     editing.value.name = form.name
     editing.value.category = form.category
     editing.value.domain = form.domain
     editing.value.owner = form.owner
+    editing.value.version = form.version
+    editing.value.status = form.status
     editing.value.description = form.description
     ElMessage.success('标准已更新（Mock）')
   } else {
+    let code = form.code
+    if (mockStandards.some((item) => item.code === code)) {
+      code = `BZ-${Date.now().toString().slice(-4)}`
+    }
     mockStandards.unshift({
       id: `mock-${Date.now()}`,
-      code: `BZ-${String(mockStandards.length + 1).padStart(4, '0')}`,
+      code,
       name: form.name,
       category: form.category,
       domain: form.domain,
       owner: form.owner,
-      status: '草稿',
-      updateTime: new Date().toLocaleString('sv-SE').replace('T', ' '),
-      version: 'V1.0',
+      status: form.status,
+      updateTime: form.updateTime,
+      version: form.version,
       mappedFields: 0,
       description: form.description || '新建标准',
     })
