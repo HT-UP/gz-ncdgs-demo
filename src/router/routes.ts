@@ -49,6 +49,36 @@ export const routes: RouteRecordRaw[] = [
             name: 'StandardVersion',
             component: () => import('@/pages/standard/version.vue'),
           },
+          {
+            path: 'lifecycle',
+            name: 'StandardLifecycle',
+            component: () => import('@/pages/standard/lifecycle.vue'),
+          },
+          {
+            path: 'batch-import',
+            name: 'StandardBatchImport',
+            component: () => import('@/pages/standard/batch-import.vue'),
+          },
+          {
+            path: 'batch-retire',
+            name: 'StandardBatchRetire',
+            component: () => import('@/pages/standard/batch-retire.vue'),
+          },
+          {
+            path: 'mapping-find',
+            name: 'MappingAutoFind',
+            component: () => import('@/pages/standard/mapping-find.vue'),
+          },
+          {
+            path: 'publish-notify',
+            name: 'StandardPublishNotify',
+            component: () => import('@/pages/standard/publish-notify.vue'),
+          },
+          {
+            path: 'fallout-drill',
+            name: 'FalloutDrill',
+            component: () => import('@/pages/standard/fallout-drill.vue'),
+          },
         ],
       },
       {
@@ -85,6 +115,36 @@ export const routes: RouteRecordRaw[] = [
             path: 'monitor',
             name: 'DataSourceMonitor',
             component: () => import('@/pages/datasource/monitor.vue'),
+          },
+          {
+            path: 'health',
+            name: 'DataSourceHealth',
+            component: () => import('@/pages/datasource/health.vue'),
+          },
+          {
+            path: 'log-analysis',
+            name: 'DataSourceLogAnalysis',
+            component: () => import('@/pages/datasource/log-analysis.vue'),
+          },
+          {
+            path: 'connectivity-test',
+            name: 'ConnectivityTest',
+            component: () => import('@/pages/datasource/connectivity-test.vue'),
+          },
+          {
+            path: 'driver',
+            name: 'DriverManage',
+            component: () => import('@/pages/datasource/driver.vue'),
+          },
+          {
+            path: 'batch-register',
+            name: 'DataSourceBatchRegister',
+            component: () => import('@/pages/datasource/batch-register.vue'),
+          },
+          {
+            path: 'perf-monitor',
+            name: 'DataSourcePerfMonitor',
+            component: () => import('@/pages/datasource/perf-monitor.vue'),
           },
         ],
       },
@@ -127,6 +187,41 @@ export const routes: RouteRecordRaw[] = [
             path: 'tag',
             name: 'DataTag',
             component: () => import('@/pages/metadata/tag.vue'),
+          },
+          {
+            path: 'collection-overview',
+            name: 'CollectionOverview',
+            component: () => import('@/pages/metadata/collection-overview.vue'),
+          },
+          {
+            path: 'collection-failure',
+            name: 'CollectionFailure',
+            component: () => import('@/pages/metadata/collection-failure.vue'),
+          },
+          {
+            path: 'tag-stats',
+            name: 'TagStats',
+            component: () => import('@/pages/metadata/tag-stats.vue'),
+          },
+          {
+            path: 'tag-conflict',
+            name: 'TagConflict',
+            component: () => import('@/pages/metadata/tag-conflict.vue'),
+          },
+          {
+            path: 'version',
+            name: 'MetadataVersion',
+            component: () => import('@/pages/metadata/version.vue'),
+          },
+          {
+            path: 'version-notify',
+            name: 'MetadataVersionNotify',
+            component: () => import('@/pages/metadata/version-notify.vue'),
+          },
+          {
+            path: 'search',
+            name: 'MetadataSearch',
+            component: () => import('@/pages/metadata/search.vue'),
           },
         ],
       },
@@ -180,6 +275,56 @@ export const routes: RouteRecordRaw[] = [
             name: 'DataDevSecurity',
             component: () => import('@/pages/datadev/security.vue'),
           },
+          {
+            path: 'schedule-arch',
+            name: 'ScheduleArch',
+            component: () => import('@/pages/datadev/schedule-arch.vue'),
+          },
+          {
+            path: 'refresh-compare',
+            name: 'RefreshCompare',
+            component: () => import('@/pages/datadev/refresh-compare.vue'),
+          },
+          {
+            path: 'window-calc',
+            name: 'WindowCalc',
+            component: () => import('@/pages/datadev/window-calc.vue'),
+          },
+          {
+            path: 'stream-adv',
+            name: 'StreamAdvanced',
+            component: () => import('@/pages/datadev/stream-adv.vue'),
+          },
+          {
+            path: 'ai-dev',
+            name: 'AIDevIntegration',
+            component: () => import('@/pages/datadev/ai-dev.vue'),
+          },
+          {
+            path: 'breakpoint',
+            name: 'FlowBreakpoint',
+            component: () => import('@/pages/datadev/breakpoint.vue'),
+          },
+          {
+            path: 'step-preview',
+            name: 'StepPreview',
+            component: () => import('@/pages/datadev/step-preview.vue'),
+          },
+          {
+            path: 'mock-verify',
+            name: 'MockDataVerify',
+            component: () => import('@/pages/datadev/mock-verify.vue'),
+          },
+          {
+            path: 'template-clone',
+            name: 'TaskTemplateClone',
+            component: () => import('@/pages/datadev/template-clone.vue'),
+          },
+          {
+            path: 'calendar',
+            name: 'ScheduleCalendar',
+            component: () => import('@/pages/datadev/calendar.vue'),
+          },
         ],
       },
       {
@@ -216,6 +361,51 @@ export const routes: RouteRecordRaw[] = [
             path: 'report',
             name: 'QualityReport',
             component: () => import('@/pages/quality/report.vue'),
+          },
+          {
+            path: 'eval-model',
+            name: 'QualityEvalModel',
+            component: () => import('@/pages/quality/eval-model.vue'),
+          },
+          {
+            path: 'rule-template',
+            name: 'RuleTemplateLibrary',
+            component: () => import('@/pages/quality/rule-template.vue'),
+          },
+          {
+            path: 'rule-custom',
+            name: 'RuleTemplateCustom',
+            component: () => import('@/pages/quality/rule-custom.vue'),
+          },
+          {
+            path: 'rule-version',
+            name: 'RuleVersionManage',
+            component: () => import('@/pages/quality/rule-version.vue'),
+          },
+          {
+            path: 'issue-ticket',
+            name: 'QualityIssueTicket',
+            component: () => import('@/pages/quality/issue-ticket.vue'),
+          },
+          {
+            path: 'report-export',
+            name: 'QualityReportExport',
+            component: () => import('@/pages/quality/report-export.vue'),
+          },
+          {
+            path: 'realtime-monitor',
+            name: 'RealtimeQualityMonitor',
+            component: () => import('@/pages/quality/realtime-monitor.vue'),
+          },
+          {
+            path: 'realtime-task',
+            name: 'RealtimeTaskMetrics',
+            component: () => import('@/pages/quality/realtime-task.vue'),
+          },
+          {
+            path: 'dashboard',
+            name: 'QualityDashboard',
+            component: () => import('@/pages/quality/dashboard.vue'),
           },
         ],
       },
@@ -264,6 +454,46 @@ export const routes: RouteRecordRaw[] = [
             name: 'AssetDetail',
             component: () => import('@/pages/resource/detail.vue'),
           },
+          {
+            path: 'compare',
+            name: 'AssetCompare',
+            component: () => import('@/pages/resource/compare.vue'),
+          },
+          {
+            path: 'subscribe',
+            name: 'AssetSubscribe',
+            component: () => import('@/pages/resource/subscribe.vue'),
+          },
+          {
+            path: 'favorite',
+            name: 'AssetFavorite',
+            component: () => import('@/pages/resource/favorite.vue'),
+          },
+          {
+            path: 'asset-stats',
+            name: 'AssetStats',
+            component: () => import('@/pages/resource/asset-stats.vue'),
+          },
+          {
+            path: 'field-stats',
+            name: 'FieldStats',
+            component: () => import('@/pages/resource/field-stats.vue'),
+          },
+          {
+            path: 'preview-policy',
+            name: 'PreviewPolicy',
+            component: () => import('@/pages/resource/preview-policy.vue'),
+          },
+          {
+            path: 'change-log',
+            name: 'AssetChangeLog',
+            component: () => import('@/pages/resource/change-log.vue'),
+          },
+          {
+            path: 'probe-apply',
+            name: 'ProbeApply',
+            component: () => import('@/pages/resource/probe-apply.vue'),
+          },
         ],
       },
       {
@@ -306,6 +536,56 @@ export const routes: RouteRecordRaw[] = [
             name: 'ComplianceGovern',
             component: () => import('@/pages/security/compliance.vue'),
           },
+          {
+            path: 'classify-grade',
+            name: 'ClassifyGrade',
+            component: () => import('@/pages/security/classify-grade.vue'),
+          },
+          {
+            path: 'compliance-check',
+            name: 'ComplianceCheck',
+            component: () => import('@/pages/security/compliance-check.vue'),
+          },
+          {
+            path: 'grade-list',
+            name: 'GradeList',
+            component: () => import('@/pages/security/grade-list.vue'),
+          },
+          {
+            path: 'key-rotation',
+            name: 'KeyRotation',
+            component: () => import('@/pages/security/key-rotation.vue'),
+          },
+          {
+            path: 'perm-flow',
+            name: 'PermFlow',
+            component: () => import('@/pages/security/perm-flow.vue'),
+          },
+          {
+            path: 'perm-batch',
+            name: 'PermBatch',
+            component: () => import('@/pages/security/perm-batch.vue'),
+          },
+          {
+            path: 'perm-minimum',
+            name: 'PermMinimum',
+            component: () => import('@/pages/security/perm-minimum.vue'),
+          },
+          {
+            path: 'sec-ops',
+            name: 'SecurityOps',
+            component: () => import('@/pages/security/sec-ops.vue'),
+          },
+          {
+            path: 'net-host',
+            name: 'NetHostSecurity',
+            component: () => import('@/pages/security/net-host.vue'),
+          },
+          {
+            path: 'sec-audit-analysis',
+            name: 'SecurityAuditAnalysis',
+            component: () => import('@/pages/security/sec-audit-analysis.vue'),
+          },
         ],
       },
       {
@@ -343,6 +623,61 @@ export const routes: RouteRecordRaw[] = [
             name: 'AgentCapability',
             component: () => import('@/pages/intelligence/capability.vue'),
           },
+          {
+            path: 'meta-complete',
+            name: 'MetaComplete',
+            component: () => import('@/pages/intelligence/meta-complete.vue'),
+          },
+          {
+            path: 'agent-summary',
+            name: 'AgentSummary',
+            component: () => import('@/pages/intelligence/agent-summary.vue'),
+          },
+          {
+            path: 'agent-eval',
+            name: 'AgentEval',
+            component: () => import('@/pages/intelligence/agent-eval.vue'),
+          },
+          {
+            path: 'kb-content',
+            name: 'KBContent',
+            component: () => import('@/pages/intelligence/kb-content.vue'),
+          },
+          {
+            path: 'kb-vector',
+            name: 'KBVector',
+            component: () => import('@/pages/intelligence/kb-vector.vue'),
+          },
+          {
+            path: 'kb-pilot',
+            name: 'KBPilot',
+            component: () => import('@/pages/intelligence/kb-pilot.vue'),
+          },
+          {
+            path: 'kb-connect',
+            name: 'KBConnect',
+            component: () => import('@/pages/intelligence/kb-connect.vue'),
+          },
+          {
+            path: 'kb-category',
+            name: 'KBCategory',
+            component: () => import('@/pages/intelligence/kb-category.vue'),
+          },
+          {
+            path: 'kb-permission',
+            name: 'KBPermission',
+            component: () => import('@/pages/intelligence/kb-permission.vue'),
+          },
+          {
+            path: 'kb-service',
+            name: 'KBService',
+            component: () => import('@/pages/intelligence/kb-service.vue'),
+          },
+          {
+            path: 'agent-resource',
+            name: 'AgentResource',
+            component: () => import('@/pages/intelligence/agent-resource.vue'),
+          },
         ],
       },
       {
@@ -374,6 +709,36 @@ export const routes: RouteRecordRaw[] = [
             path: 'baseline',
             name: 'SecurityBaseline',
             component: () => import('@/pages/system/baseline.vue'),
+          },
+          {
+            path: 'capacity',
+            name: 'CapacityEval',
+            component: () => import('@/pages/system/capacity.vue'),
+          },
+          {
+            path: 'storage-detail',
+            name: 'StorageDetail',
+            component: () => import('@/pages/system/storage-detail.vue'),
+          },
+          {
+            path: 'storage-plan',
+            name: 'StoragePlan',
+            component: () => import('@/pages/system/storage-plan.vue'),
+          },
+          {
+            path: 'user-org',
+            name: 'UserOrgManage',
+            component: () => import('@/pages/system/user-org.vue'),
+          },
+          {
+            path: 'message',
+            name: 'MessageNotify',
+            component: () => import('@/pages/system/message.vue'),
+          },
+          {
+            path: 'param',
+            name: 'SystemParam',
+            component: () => import('@/pages/system/param.vue'),
           },
         ],
       },
