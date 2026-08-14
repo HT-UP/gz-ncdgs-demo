@@ -3,3 +3,10 @@ node_modules
 .env
 .DS_Store
 .vscode
+
+# 冗余生成的镜像 / 替代文件（项目为 Vue3 + TS，以下文件均非源码）
+*.vue.js
+/src/main.js
+/src/router/*.js
+/src/mock/*.js
+vite.config.js
